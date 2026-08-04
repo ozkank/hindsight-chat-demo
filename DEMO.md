@@ -8,30 +8,33 @@ Persona: bir çağrı merkezinin müşteri destek asistanı. Gösterilecek şey:
 temel işlemi — `retain` (yaz), `recall` (tek bir kaydı hatırla), `reflect` (birden fazla
 kaydı sentezleyip değerlendirme yap) — canlı olarak, farklı oturumlar arasında çalışıyor.
 
+**Model notu:** varsayılan model `llama3.1:8b`. Bu model, testlerde `qwen2.5` ve
+`llama3.2`'den çok daha güvenilir çıktı (retain/recall/reflect'in üçü de 3/3-4/4 tetiklendi,
+Çince'ye kayma hiç görülmedi) — bkz. README "Known limitations". Tek dezavantajı: cevaplar
+biraz yavaş gelebiliyor (bazen ~1 dakikaya kadar), sunum sırasında sabırlı ol, boşluğu
+"Hindsight arka planda kontrol ediyor" diye doldurabilirsin.
+
 1. Bir mesaj yaz: *"Merhaba, ben Ahmet. Sizinle iletişimde telefon yerine e-posta tercih
    ediyorum, lütfen bunu hesabıma not alın."*
    → Agent `retain` çağırır, mesajın altında yeşil bir "🧠 Hindsight'a yazıldı" etiketi görünür.
-   **Test edilen en güvenilir açılış cümlesi budur (4/4 denemede tetiklendi) — canlı demoda
-   bunu kullan, kargo-şikayeti tarzı cümleler test sırasında çok daha az güvenilirdi.**
 2. Sol üstteki **"+ Yeni arama"** butonuna bas (temiz bir sayfa açılır, aynı bank_id kullanılır
    — yani "farklı bir temsilci" aynı müşteri geçmişine erişebiliyor).
 3. Sor: *"Merhaba, ben Ahmet, geçen hafta aramıştım. İletişim tercihimi hatırlıyor musunuz?"*
    → Agent `recall` çağırır, mesajın altında sarı bir "🧠 Hindsight'tan hatırlandı" etiketi
-   görünür. **Dikkat: recall test sırasında düşük bir tetiklenme oranı gösterdi (birkaç
-   denemede bir çalıştı). Tetiklenmezse tek yapman gereken aynı soruyu tekrar sormak —
-   genelde 2-3 denemede biri çalışıyor. Canlıda "biraz daha net sorayım" diyip tekrar
-   deneyebilirsin.**
-4. Aynı sohbette sor: *"Genel olarak bana nasıl bir öneride bulunursunuz?"*
+   görünür.
+4. **Tekrar "+ Yeni arama" ile yeni bir oturum aç** (aynı oturumda sorma — model kendi
+   sohbet geçmişinden cevap verip tool'u atlayabiliyor), sor: *"Genel olarak bana nasıl bir
+   öneride bulunursunuz?"*
    → Agent `reflect` çağırır, mesajın altında mor bir "🧠 Hindsight'ta değerlendirildi"
-   etiketi görünür. Tool çağrısı güvenilir tetikleniyor, ama üretilen cevap metni bazen
-   yabancı bir dile (Çince) kayabiliyor — bu bir model kalite sorunu, mekanizmanın kendisi
-   çalışıyor. İzleyiciye etiketi ve query'yi vurgula, cevap metnine değil.
+   etiketi görünür.
 5. Sağ üstteki linkten Hindsight Admin UI'ı açıp (`http://localhost:9999`) kaydedilen hafızayı
    canlı olarak gösterebilirsin.
 
-**İpucu:** Tek bir net, tercih/bilgi bildiren cümle kullan (ör. adım 1'deki gibi). Şikayet
-tarzı cümleler ("X gelmedi", "Y sorun yaşadım") test sırasında retain'i çok daha az
-güvenilir tetikledi — bkz. README "Known limitations".
+**İpucu:** Tek bir net, tercih/bilgi bildiren cümle kullan (ör. adım 1'deki gibi). Bir mesajda
+birden fazla ayrı bilgi (ör. hem şikayet hem adres değişikliği) daha az güvenilir. Her
+recall/reflect denemesini **yeni bir oturumda** ve **tek mesaj** olarak sor — aynı oturumda
+art arda sorular, modelin gerçek bir hafıza sorgusu yapmadan kendi konuşma geçmişinden
+cevap vermesine yol açabiliyor.
 
 ## Demo öncesi kontrol listesi
 

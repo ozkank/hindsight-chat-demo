@@ -21,7 +21,7 @@ Browser  ──▶  ASP.NET Core (Microsoft.Agents.AI)  ──▶  Ollama (local
 - .NET 9 SDK
 - Docker (for Hindsight)
 - [Ollama](https://ollama.com), running locally, with a tool-calling model pulled
-  (default: `qwen2.5`)
+  (default: `llama3.1:8b`)
 
 ## Quick start
 
@@ -79,18 +79,27 @@ session gets a fresh `AgentSession` but keeps the same Hindsight `bankId`.
 
 ## Known limitations
 
-Tool-call reliability with small local models is sensitive to temperature and message
-framing. Testing across `llama3.2:latest` (3B) and `qwen2.5:latest` (7B) showed:
+Tool-call reliability with small local models is sensitive to the model, the temperature,
+and message framing. Three models were tested with the same battery of prompts (single-fact
+`retain`, fresh-session `recall`, fresh-session `reflect`, each repeated 3-4 times):
 
-- Both models reliably trigger `retain`/`recall`/`reflect` — the memory mechanics themselves
-  are sound.
-- Response *synthesis* after a tool call can be inconsistent at default temperature (garbled
-  text, occasional off-language output). Setting `Ollama:Temperature` to `0.3` measurably
-  reduced this.
-- Complex or multi-fact messages are less reliable than single, clearly-stated facts.
+| Model | `retain` | `recall` | `reflect` fires | `reflect` stays in Turkish |
+|---|---|---|---|---|
+| `llama3.2:latest` (3B) | reliable | unreliable | unreliable | n/a |
+| `qwen2.5:latest` (7B) | reliable | unreliable (~1/8) | reliable | unreliable (leaked Chinese) |
+| `llama3.1:8b` (current default) | reliable | reliable (3/3) | reliable (3/3) | reliable (3/3) |
+
+`llama3.1:8b` was the clear winner and is the current default. It is noticeably slower per
+reply than `qwen2.5` (occasionally near a minute), which is an acceptable trade-off for a
+live demo. `Ollama:Temperature` at `0.3` measurably helped all three models.
+
+Even with `llama3.1:8b`, complex or multi-fact messages (e.g. a complaint and an address
+change in one sentence) are less reliable than a single, clearly-stated fact — keep demo
+messages to one fact per turn. And `reflect`'s synthesized answer is sometimes generic
+rather than grounded in the specific stored fact, even when the tool call itself succeeds.
 
 For a live demo, treat the memory-activity tag as the artifact of record; the model's prose
-around it may occasionally be rough.
+around it may occasionally be imperfect.
 
 ## Demo script
 
