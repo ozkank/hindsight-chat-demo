@@ -1,0 +1,29 @@
+services:
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:latest
+    container_name: hindsight
+    restart: unless-stopped
+    ports:
+      - "8888:8888" # API + MCP
+      - "9999:9999" # Admin UI
+    environment:
+      HINDSIGHT_API_HOST: 0.0.0.0
+      HINDSIGHT_API_PORT: "8888"
+      HINDSIGHT_API_LOG_LEVEL: info
+      HINDSIGHT_ENABLE_API: "true"
+      HINDSIGHT_ENABLE_CP: "true"
+      HINDSIGHT_CP_DATAPLANE_API_URL: http://localhost:8888
+      # Hindsight's own LLM backend (fact extraction/consolidation) — talks to the
+      # same host Ollama instance the chat app uses. Keep the model name here in
+      # sync with Ollama:Model in appsettings.json.
+      HINDSIGHT_API_LLM_PROVIDER: ollama
+      HINDSIGHT_API_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      HINDSIGHT_API_LLM_MODEL: qwen2.5
+      HINDSIGHT_API_LLM_MAX_CONCURRENT: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - hindsight-data:/home/hindsight/.pg0
+
+volumes:
+  hindsight-data:

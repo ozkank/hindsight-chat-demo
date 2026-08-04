@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hindsight Chat Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">🧠 Hindsight Demo</div>
+      </div>
+      <button id="new-session-btn" class="new-session-btn">+ Yeni arama</button>
+      <div class="session-info">
+        <span class="label">Oturum</span>
+        <code id="session-id-display">-</code>
+      </div>
+      <div class="sidebar-footer">
+        <span class="label">Bank ID</span>
+        <code id="bank-id-display">-</code>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">Müşteri Destek Asistanı</div>
+        <a id="admin-link" class="admin-link" href="http://localhost:9999" target="_blank" rel="noopener">
+          Hindsight Admin UI'da hafızayı gör →
+        </a>
+      </header>
+
+      <section id="messages" class="messages"></section>
+
+      <form id="chat-form" class="composer">
+        <textarea
+          id="chat-input"
+          placeholder="Bir mesaj yaz..."
+          rows="1"
+          autocomplete="off"
+        ></textarea>
+        <button type="submit" id="send-btn">Gönder</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
