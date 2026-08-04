@@ -2,14 +2,18 @@
 
 A minimal .NET 9 chat app that demonstrates [Hindsight](https://hindsight.vectorize.io), an
 open-source agent-memory system, in a customer-support scenario. An agent built with
-[Microsoft Agent Framework](https://github.com/microsoft/agent-framework) writes durable
-facts to Hindsight via `retain` during a conversation, and reads them back via `recall` in a
-later, unrelated session — with every tool call surfaced live in the UI.
+[Microsoft Agent Framework](https://github.com/microsoft/agent-framework) uses Hindsight's
+three core operations during a conversation — with every tool call surfaced live in the UI:
+
+- `retain` — writes a durable fact to memory.
+- `recall` — reads back one specific fact in a later, unrelated session.
+- `reflect` — combines multiple facts, observations, and past conversations into a single
+  synthesized answer (e.g. "how has this customer's experience been overall?").
 
 ```
 Browser  ──▶  ASP.NET Core (Microsoft.Agents.AI)  ──▶  Ollama (local LLM)
                         │
-                        └──▶  Hindsight (MCP: retain / recall)
+                        └──▶  Hindsight (MCP: retain / recall / reflect)
 ```
 
 ## Prerequisites
@@ -62,23 +66,24 @@ docker-compose.hindsight.yml       Hindsight (API + MCP + Admin UI, persistent v
 Program.cs                         Minimal API: /api/chat, /api/health, /api/config
 Models/ChatModels.cs               Request/response DTOs
 Services/HindsightAgentService.cs  MCP connection, agent construction, session management
-Services/ToolCallRecorder.cs       Captures retain/recall calls per request (AsyncLocal)
-system_message.txt                 Agent system prompt (retain/recall rules)
+Services/ToolCallRecorder.cs       Captures retain/recall/reflect calls per request (AsyncLocal)
+system_message.txt                 Agent system prompt (retain/recall/reflect rules)
 wwwroot/                           Chat UI (vanilla HTML/JS/CSS)
 ```
 
 `POST /api/chat` takes `{ message, userId, sessionId }` and returns
-`{ message, toolCalls, sessionId }`, where `toolCalls` lists every retain/recall invoked
-while handling that request — this is what the UI renders as a memory-activity tag under
-each message. Sessions are held in memory per process (no database); starting a new session
-gets a fresh `AgentSession` but keeps the same Hindsight `bankId`.
+`{ message, toolCalls, sessionId }`, where `toolCalls` lists every retain/recall/reflect
+invoked while handling that request — this is what the UI renders as a memory-activity tag
+under each message. Sessions are held in memory per process (no database); starting a new
+session gets a fresh `AgentSession` but keeps the same Hindsight `bankId`.
 
 ## Known limitations
 
 Tool-call reliability with small local models is sensitive to temperature and message
 framing. Testing across `llama3.2:latest` (3B) and `qwen2.5:latest` (7B) showed:
 
-- Both models reliably trigger `retain`/`recall` — the memory mechanics themselves are sound.
+- Both models reliably trigger `retain`/`recall`/`reflect` — the memory mechanics themselves
+  are sound.
 - Response *synthesis* after a tool call can be inconsistent at default temperature (garbled
   text, occasional off-language output). Setting `Ollama:Temperature` to `0.3` measurably
   reduced this.

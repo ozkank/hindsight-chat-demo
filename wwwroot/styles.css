@@ -11,6 +11,7 @@
   --assistant-bubble: #1d222b;
   --memory-write: #2e7d32;
   --memory-read: #b8860b;
+  --memory-reflect: #8b5cf6;
   --radius: 10px;
 }
 
@@ -197,6 +198,11 @@ body {
 .tool-call-tag.recall {
   border-color: var(--memory-read);
   color: #e0b64f;
+}
+
+.tool-call-tag.reflect {
+  border-color: var(--memory-reflect);
+  color: #b39ef5;
 }
 
 .empty-state {

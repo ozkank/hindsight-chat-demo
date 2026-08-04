@@ -14,8 +14,9 @@ function renderEmptyState() {
   messagesEl.innerHTML = `
     <div class="empty-state">
       Yeni bir arama başlattın. Müşteri gibi bir şey anlat (ör. "Merhaba, kargom 2 haftadır
-      teslim edilmedi, adresim de İzmir'e taşındı") ya da daha önce anlattığın bir şeyi sor
-      ("geçen hafta aramıştım, sorunumu hatırlıyor musunuz?").
+      teslim edilmedi"), daha önce anlattığın bir şeyi sor ("geçen hafta aramıştım, sorunumu
+      hatırlıyor musunuz?") ya da genel bir değerlendirme iste ("bana nasıl bir öneride
+      bulunursunuz?").
     </div>`;
 }
 
@@ -26,6 +27,9 @@ function toolCallLabel(toolCall) {
   }
   if (toolCall.name === "recall") {
     return { cls: "recall", text: `🧠 Hindsight'tan hatırlandı: ${argsText}` };
+  }
+  if (toolCall.name === "reflect") {
+    return { cls: "reflect", text: `🧠 Hindsight'ta değerlendirildi: ${argsText}` };
   }
   return { cls: "recall", text: `🧠 ${toolCall.name}: ${argsText}` };
 }

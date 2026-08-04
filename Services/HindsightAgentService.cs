@@ -49,13 +49,17 @@ public sealed class HindsightAgentService : IAsyncDisposable
             _mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             var allMcpTools = await _mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
-            // Hindsight exposes many MCP tools; this demo is specifically about retain/recall,
-            // and keeping the tool list short also makes tool-call selection far more reliable
-            // for a small local model like llama3.2.
+            // Hindsight exposes many MCP tools; this demo is specifically about retain,
+            // recall and reflect, and keeping the tool list short also makes tool-call
+            // selection far more reliable for a small local model.
             IList<AITool> tools = allMcpTools
-                .Where(t => t.Name is "retain" or "recall")
+                .Where(t => t.Name is "retain" or "recall" or "reflect")
                 .Cast<AITool>()
                 .ToList();
+
+            _logger.LogInformation(
+                "Available Hindsight MCP tools matching retain/recall/reflect: {Tools}",
+                string.Join(", ", tools.Select(t => t.Name)));
 
             var ollamaBaseUrl = _config["Ollama:BaseUrl"] ?? "http://localhost:11434";
             var model = _config["Ollama:Model"] ?? "llama3.2:latest";
@@ -94,9 +98,11 @@ public sealed class HindsightAgentService : IAsyncDisposable
             {
                 functionInvokingClient.FunctionInvoker = async (context, cancellationToken) =>
                 {
+                    _logger.LogInformation("Invoking tool {ToolName}", context.Function.Name);
                     var result = await context.Function.InvokeAsync(context.Arguments, cancellationToken);
                     var arguments = context.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value);
                     _recorder.Record(context.Function.Name, arguments);
+                    _logger.LogInformation("Recorded tool call {ToolName}", context.Function.Name);
                     return result;
                 };
             }
