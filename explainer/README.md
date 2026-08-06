@@ -1,12 +1,15 @@
-# Hindsight Memory Types — Explainer Notebook
+# Hindsight Quickstart Notebook
 
-A standalone Jupyter notebook that walks through Hindsight's memory model by calling its
-REST API directly — no LLM, no agent, no chat UI. It exists for one purpose: teaching how
-`retain` turns into World Facts, Observations, Mental Models, and (an open question)
-Experience, without the added noise of an LLM deciding when to call a tool.
+A Jupyter notebook that mirrors the structure and simplicity of Hindsight's own
+[quickstart notebook](https://github.com/vectorize-io/hindsight-cookbook/blob/main/notebooks/01-quickstart.ipynb),
+using the official [`hindsight-client`](https://pypi.org/project/hindsight-client/) Python
+package — with an original example (a customer support assistant, Ahmet) instead of the
+cookbook's.
 
-Use this **before** the main chat app demo, as a "how the engine works" primer. Use the
-main app to show "how an LLM-driven agent decides to use these tools in conversation."
+Use this **before** the main chat app demo, as a "how the engine works" primer, with no
+LLM deciding when to call a tool — just direct `retain`/`recall`/`reflect` calls, so every
+run behaves the same way. Use the main app afterward to show "how an LLM-driven agent
+decides to use these tools mid-conversation."
 
 ## Setup
 
@@ -21,22 +24,24 @@ Hindsight must already be running (see the main [README](../README.md) — `dock
 
 ## Run
 
-```bash
-./.venv/bin/jupyter notebook hindsight_memory_types.ipynb
-```
+Open `hindsight_memory_types.ipynb` in VS Code (or `./.venv/bin/jupyter notebook
+hindsight_memory_types.ipynb` for the browser version) and run the cells top to bottom.
+Pick the `explainer/.venv` interpreter as the kernel.
 
-Run the cells top to bottom. Each section pairs a REST call with a note on where to look
-in the [Admin UI](http://localhost:9999) (bank: `explainer-demo` — separate from the main
-app's `destek-hatti-demo` bank, so the two never mix).
+## Structure
 
-## What it covers
+**Part 1 — Quickstart** (matches the official notebook's scope): connect, `retain`,
+`recall`, `reflect`, a short note on memory types, done. This is what to present live.
 
-| Section | What you'll see |
-|---|---|
-| `retain` → World Facts | One call, one fact, extracted with entities |
-| Multiple facts + `consolidate` → Observations | Hindsight synthesizing a pattern across several facts |
-| Mental Models | A standing, named question that Hindsight keeps answered as facts change |
-| Experience | An open question — three methods tried, none worked; the notebook shows the (non-)result honestly |
+**Part 2 — Bonus, optional**: goes beyond the quickstart into how `retain` produces
+Hindsight's different memory categories. Two honest, reproducible findings from building
+it, worth knowing before presenting:
 
-Re-running the notebook is safe — the first cell clears out `explainer-demo`'s previous
-data (memories and the mental model) so counts stay easy to follow each time.
+- **Mental Models** sometimes report no relevant information even when clearly-relevant
+  World Facts exist in the same bank.
+- **Experience** never populated in testing — three different approaches were tried
+  (first-person phrasing, a conversation transcript, the Admin UI's own document upload),
+  all three landed as World Facts instead.
+
+Bank used: `quickstart-demo`, separate from the main app's `destek-hatti-demo` bank, so
+the two never mix. The notebook clears it at the start and deletes it again at the end.

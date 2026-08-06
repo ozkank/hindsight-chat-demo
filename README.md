@@ -105,9 +105,11 @@ around it may occasionally be imperfect.
 
 See [DEMO.md](DEMO.md) for the presentation scenario and a pre-demo checklist.
 
-## Explainer notebook
+## Quickstart notebook
 
-[`explainer/`](explainer/) has a standalone Jupyter notebook that calls Hindsight's REST
-API directly (no LLM, no agent) to show exactly how `retain` turns into World Facts,
-Observations, and Mental Models. Good as a "how the engine works" primer before the live
-chat demo — see [explainer/README.md](explainer/README.md).
+[`explainer/`](explainer/) has a Jupyter notebook using the official `hindsight-client`
+Python package — same structure as
+[Hindsight's own quickstart](https://github.com/vectorize-io/hindsight-cookbook), with
+our own example. It calls `retain`/`recall`/`reflect` directly with no LLM deciding when
+to use them, so every run behaves the same way. Good as a "how the engine works" primer
+before the live chat demo — see [explainer/README.md](explainer/README.md).
