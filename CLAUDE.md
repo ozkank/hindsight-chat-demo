@@ -23,3 +23,10 @@ Context for anyone (human or AI) making changes to this project.
   list must be re-specified on that same `ChatOptions` object — otherwise it silently
   overrides (empties) the tools configured at agent construction. See
   [microsoft/agent-framework#1453](https://github.com/microsoft/agent-framework/issues/1453).
+- [`explainer/`](explainer/) calls Hindsight's REST API directly (bypassing the LLM/agent
+  entirely) to teach the World Facts → Observations → Mental Models pipeline. Confirmed
+  there, reproducibly: Mental Models sometimes report "no information found" even when
+  clearly relevant World Facts exist in the same bank. The "Experience" memory category
+  never populated in any test — first-person phrasing, a `document_id`-grouped transcript,
+  and the Admin UI's own "+ Add Document" upload were all tried; all three landed as World
+  Facts instead. Worth revisiting against Hindsight's own docs/issue tracker.

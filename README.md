@@ -104,3 +104,10 @@ around it may occasionally be imperfect.
 ## Demo script
 
 See [DEMO.md](DEMO.md) for the presentation scenario and a pre-demo checklist.
+
+## Explainer notebook
+
+[`explainer/`](explainer/) has a standalone Jupyter notebook that calls Hindsight's REST
+API directly (no LLM, no agent) to show exactly how `retain` turns into World Facts,
+Observations, and Mental Models. Good as a "how the engine works" primer before the live
+chat demo — see [explainer/README.md](explainer/README.md).
