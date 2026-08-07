@@ -14,20 +14,7 @@ three core operations during a conversation — with every tool call surfaced li
 
 Everything runs locally — no cloud LLM, no external API keys.
 
-```mermaid
-flowchart LR
-    subgraph Local["💻 Local"]
-        Browser["🌐 Browser<br/>Chat UI (wwwroot)"]
-        Agent["🤖 HindsightChatDemo Agent<br/>ASP.NET Core + Microsoft Agent Framework"]
-        Ollama["🦙 Ollama<br/>llama3.1:8b"]
-        Hindsight["👁️ Hindsight<br/>retain · recall · reflect"]
-
-        Browser <-->|"HTTP api/chat"| Agent
-        Agent <-->|"MCP Protocol"| Hindsight
-        Agent <-->|"native api/chat, tool-calling"| Ollama
-        Hindsight <-->|"fact extraction, consolidation"| Ollama
-    end
-```
+![Architecture diagram: browser talks HTTP to the HindsightChatDemo Agent (ASP.NET Core + Microsoft Agent Framework), which talks MCP Protocol to Hindsight and native api/chat to Ollama for tool-calling; Hindsight also uses Ollama for its own fact extraction — all inside a single Local boundary.](docs/architecture.svg)
 
 - The **agent** (`applications/HindsightChatDemo/`) is the only piece with custom code. It
   holds the conversation, decides — via the LLM's tool calls — when to invoke `retain`,
