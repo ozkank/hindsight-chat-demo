@@ -23,10 +23,15 @@ Context for anyone (human or AI) making changes to this project.
   list must be re-specified on that same `ChatOptions` object — otherwise it silently
   overrides (empties) the tools configured at agent construction. See
   [microsoft/agent-framework#1453](https://github.com/microsoft/agent-framework/issues/1453).
-- [`explainer/`](explainer/) calls Hindsight's REST API directly (bypassing the LLM/agent
-  entirely) to teach the World Facts → Observations → Mental Models pipeline. Confirmed
-  there, reproducibly: Mental Models sometimes report "no information found" even when
-  clearly relevant World Facts exist in the same bank. The "Experience" memory category
-  never populated in any test — first-person phrasing, a `document_id`-grouped transcript,
-  and the Admin UI's own "+ Add Document" upload were all tried; all three landed as World
-  Facts instead. Worth revisiting against Hindsight's own docs/issue tracker.
+- [`explainer/`](explainer/) uses the official `hindsight-client` package (bypassing the
+  LLM/agent entirely) to teach `retain`/`recall`/`reflect` with no tool-call randomness in
+  the loop. It previously had a "Part 2" digging into Observations/Mental
+  Models/Experience; that section was removed (Mental Models sometimes reported no
+  information despite clearly relevant facts existing, and Experience never populated
+  under any tested approach — real, reproducible findings, but not reliable enough to
+  anchor a demo on). Part 2 now covers per-user memory instead: one Hindsight bank per
+  customer, proven isolated, plus `document_id` to keep a multi-message conversation as one
+  updating record. One nuance worth knowing if you touch that notebook: `recall` always
+  returns its best-effort ranked matches from the given bank, even weak ones — it never
+  returns an empty list just because nothing is truly relevant. So "prove bank A can't see
+  bank B's data" has to check *which* facts came back, not how many.

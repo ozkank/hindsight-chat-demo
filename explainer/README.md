@@ -31,17 +31,18 @@ Pick the `explainer/.venv` interpreter as the kernel.
 ## Structure
 
 **Part 1 — Quickstart** (matches the official notebook's scope): connect, `retain`,
-`recall`, `reflect`, a short note on memory types, done. This is what to present live.
+`recall`, `reflect`, done. This is what to present live. Bank used: `quickstart-demo`,
+deleted again at the end.
 
-**Part 2 — Bonus, optional**: goes beyond the quickstart into how `retain` produces
-Hindsight's different memory categories. Two honest, reproducible findings from building
-it, worth knowing before presenting:
+**Part 2 — Per-User Memory**: the pattern Hindsight's own
+[per-user-memory](https://github.com/vectorize-io/hindsight-cookbook/blob/main/notebooks/02-per-user-memory.ipynb)
+example uses — one bank per customer instead of Part 1's single shared bank, so one
+customer's data can never surface in another's `recall`. Two customer banks
+(`support-ahmet`, `support-elif`) prove isolation, then a `document_id`-grouped
+conversation shows how to keep a multi-message exchange as one updating record instead of
+a pile of fragments. Both banks are deleted at the end.
 
-- **Mental Models** sometimes report no relevant information even when clearly-relevant
-  World Facts exist in the same bank.
-- **Experience** never populated in testing — three different approaches were tried
-  (first-person phrasing, a conversation transcript, the Admin UI's own document upload),
-  all three landed as World Facts instead.
-
-Bank used: `quickstart-demo`, separate from the main app's `destek-hatti-demo` bank, so
-the two never mix. The notebook clears it at the start and deletes it again at the end.
+A note on the isolation-proof cell: `recall` always returns its best-effort ranked
+matches from the bank it's given — it doesn't return an empty list just because nothing is
+truly relevant. So the notebook doesn't check the result *count*, it checks that none of
+the results are the other customer's data. That's the real proof.
