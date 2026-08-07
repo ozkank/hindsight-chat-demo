@@ -30,6 +30,7 @@ git clone https://github.com/ozkank/hindsight-chat-demo.git
 cd hindsight-chat-demo
 
 docker compose -f docker-compose.hindsight.yml up -d   # starts Hindsight (API/MCP :8888, Admin UI :9999)
+cd applications/HindsightChatDemo
 dotnet run                                              # starts the app, prints the listening port
 ```
 
@@ -57,18 +58,19 @@ recognized as a tool call. Ollama's native `/api/chat` endpoint handled the same
 correctly, so the app connects through
 [OllamaSharp](https://github.com/awaescher/OllamaSharp)'s `OllamaApiClient` instead of the
 OpenAI SDK. If a newer Ollama version fixes the compat layer, swap it back in
-`Services/HindsightAgentService.cs`.
+`applications/HindsightChatDemo/Services/HindsightAgentService.cs`.
 
 ## Project layout
 
 ```
-docker-compose.hindsight.yml       Hindsight (API + MCP + Admin UI, persistent volume)
-Program.cs                         Minimal API: /api/chat, /api/health, /api/config
-Models/ChatModels.cs               Request/response DTOs
-Services/HindsightAgentService.cs  MCP connection, agent construction, session management
-Services/ToolCallRecorder.cs       Captures retain/recall/reflect calls per request (AsyncLocal)
-system_message.txt                 Agent system prompt (retain/recall/reflect rules)
-wwwroot/                           Chat UI (vanilla HTML/JS/CSS)
+docker-compose.hindsight.yml                          Hindsight (API + MCP + Admin UI, persistent volume)
+applications/HindsightChatDemo/Program.cs              Minimal API: /api/chat, /api/health, /api/config
+applications/HindsightChatDemo/Models/ChatModels.cs     Request/response DTOs
+applications/HindsightChatDemo/Services/HindsightAgentService.cs  MCP connection, agent construction, session management
+applications/HindsightChatDemo/Services/ToolCallRecorder.cs       Captures retain/recall/reflect calls per request (AsyncLocal)
+applications/HindsightChatDemo/system_message.txt       Agent system prompt (retain/recall/reflect rules)
+applications/HindsightChatDemo/wwwroot/                 Chat UI (vanilla HTML/JS/CSS)
+explainer/                                             Standalone Jupyter notebooks (no LLM tool-calling in the loop)
 ```
 
 `POST /api/chat` takes `{ message, userId, sessionId }` and returns

@@ -41,7 +41,7 @@ cevap vermesine yol açabiliyor.
 - [ ] `docker ps` → `hindsight` container'ı `Up` durumda
 - [ ] `curl http://localhost:8888/health` → `"status":"healthy"`
 - [ ] `curl http://localhost:11434/api/tags` → kullanılacak model listede
-- [ ] `dotnet run` çalıştı, konsolda hata yok
+- [ ] `applications/HindsightChatDemo` içinde `dotnet run` çalıştı, konsolda hata yok
 - [ ] `curl http://localhost:5214/api/health` → `"healthy":true`
 - [ ] Tarayıcıda uygulama açık, koyu tema arayüz görünüyor
 - [ ] (opsiyonel) Hindsight Admin UI (`http://localhost:9999`) ayrı bir sekmede hazır
@@ -56,5 +56,6 @@ Docker Desktop açık mı, container ayakta mı kontrol et: `docker compose -f d
 
 **Ajan çalışıyor ama retain/recall/reflect hiç tetiklenmiyor**
 `ollama list` ile modelin indirildiğini, `docker-compose.hindsight.yml`'deki
-`HINDSIGHT_API_LLM_MODEL` ile `appsettings.json`'daki `Ollama:Model`'in aynı olduğunu
-doğrula. Küçük modellerde ara sıra atlanabilir — aynı soruyu tekrar sormak genelde yeterli.
+`HINDSIGHT_API_LLM_MODEL` ile `applications/HindsightChatDemo/appsettings.json`'daki
+`Ollama:Model`'in aynı olduğunu doğrula. Küçük modellerde ara sıra atlanabilir — aynı
+soruyu tekrar sormak genelde yeterli.
