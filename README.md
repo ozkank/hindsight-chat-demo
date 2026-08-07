@@ -10,11 +10,33 @@ three core operations during a conversation — with every tool call surfaced li
 - `reflect` — combines multiple facts, observations, and past conversations into a single
   synthesized answer (e.g. "how has this customer's experience been overall?").
 
+## Architecture
+
+Everything runs locally — no cloud LLM, no external API keys.
+
+```mermaid
+flowchart LR
+    subgraph Local["💻 Local"]
+        Browser["🌐 Browser<br/>Chat UI (wwwroot)"]
+        Agent["🤖 HindsightChatDemo Agent<br/>ASP.NET Core + Microsoft Agent Framework"]
+        Ollama["🦙 Ollama<br/>llama3.1:8b"]
+        Hindsight["👁️ Hindsight<br/>retain · recall · reflect"]
+
+        Browser <-->|"HTTP api/chat"| Agent
+        Agent <-->|"MCP Protocol"| Hindsight
+        Agent <-->|"native api/chat, tool-calling"| Ollama
+        Hindsight <-->|"fact extraction, consolidation"| Ollama
+    end
 ```
-Browser  ──▶  ASP.NET Core (Microsoft.Agents.AI)  ──▶  Ollama (local LLM)
-                        │
-                        └──▶  Hindsight (MCP: retain / recall / reflect)
-```
+
+- The **agent** (`applications/HindsightChatDemo/`) is the only piece with custom code. It
+  holds the conversation, decides — via the LLM's tool calls — when to invoke `retain`,
+  `recall`, or `reflect`, and returns both the reply and the tool-call log to the browser.
+- **Ollama** serves two different consumers with the same local model: the agent's own
+  chat/tool-calling loop, and Hindsight's internal fact-extraction pipeline (see
+  `HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml`).
+- **Hindsight** is reached over MCP (Model Context Protocol), not a REST call — the agent
+  discovers `retain`/`recall`/`reflect` as tools through the MCP session at startup.
 
 ## Prerequisites
 
