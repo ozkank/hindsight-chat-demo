@@ -6,6 +6,8 @@ const newSessionBtn = document.getElementById("new-session-btn");
 const sessionIdDisplay = document.getElementById("session-id-display");
 const bankIdDisplay = document.getElementById("bank-id-display");
 const adminLink = document.getElementById("admin-link");
+const memoryViewerBtn = document.getElementById("memory-viewer-btn");
+const memoryList = document.getElementById("memory-list");
 
 const userId = "musteri-" + Math.random().toString(36).slice(2, 8);
 let sessionId = crypto.randomUUID();
@@ -80,6 +82,39 @@ async function loadConfig() {
   }
 }
 
+// Fetches memories straight from Hindsight's REST API (see /api/memories in
+// Endpoints/MemoryEndpoints.cs) -- no MCP, no LLM. The chat above WRITES through the
+// agent's MCP tool calls; this button READS the same bank directly over HTTP, to show
+// both integration styles side by side.
+async function loadMemories() {
+  memoryViewerBtn.disabled = true;
+  memoryViewerBtn.textContent = "⏳ okunuyor...";
+
+  try {
+    const res = await fetch("/api/memories?limit=8");
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+
+    memoryList.innerHTML = "";
+    if (data.items.length === 0) {
+      memoryList.innerHTML = `<div class="memory-empty">Bankada henüz kayıt yok.</div>`;
+    }
+    for (const item of data.items) {
+      const el = document.createElement("div");
+      el.className = "memory-item";
+      const date = item.date ? new Date(item.date).toLocaleString("tr-TR") : "";
+      el.innerHTML = `<span class="memory-text"></span>${item.fact_type ?? ""} · ${date}`;
+      el.querySelector(".memory-text").textContent = item.text;
+      memoryList.appendChild(el);
+    }
+  } catch (e) {
+    memoryList.innerHTML = `<div class="memory-empty">⚠️ Okunamadı: ${e.message}</div>`;
+  } finally {
+    memoryViewerBtn.disabled = false;
+    memoryViewerBtn.textContent = "📖 Hafızayı REST'ten oku";
+  }
+}
+
 function startNewSession() {
   sessionId = crypto.randomUUID();
   sessionIdDisplay.textContent = sessionId.slice(0, 8);
@@ -135,6 +170,7 @@ input.addEventListener("keydown", (e) => {
 });
 
 newSessionBtn.addEventListener("click", startNewSession);
+memoryViewerBtn.addEventListener("click", loadMemories);
 
 sessionIdDisplay.textContent = sessionId.slice(0, 8);
 renderEmptyState();

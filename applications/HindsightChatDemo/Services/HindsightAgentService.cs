@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using HindsightChatDemo.Configuration;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using OllamaSharp;
 using HindsightChatDemo.Models;
@@ -14,7 +16,8 @@ namespace HindsightChatDemo.Services;
 /// </summary>
 public sealed class HindsightAgentService : IAsyncDisposable
 {
-    private readonly IConfiguration _config;
+    private readonly OllamaOptions _ollamaOptions;
+    private readonly HindsightOptions _hindsightOptions;
     private readonly ToolCallRecorder _recorder;
     private readonly ILogger<HindsightAgentService> _logger;
     private readonly ConcurrentDictionary<string, AgentSession> _sessions = new();
@@ -24,9 +27,14 @@ public sealed class HindsightAgentService : IAsyncDisposable
     private ChatClientAgentRunOptions? _runOptions;
     private Exception? _initError;
 
-    public HindsightAgentService(IConfiguration config, ToolCallRecorder recorder, ILogger<HindsightAgentService> logger)
+    public HindsightAgentService(
+        IOptions<OllamaOptions> ollamaOptions,
+        IOptions<HindsightOptions> hindsightOptions,
+        ToolCallRecorder recorder,
+        ILogger<HindsightAgentService> logger)
     {
-        _config = config;
+        _ollamaOptions = ollamaOptions.Value;
+        _hindsightOptions = hindsightOptions.Value;
         _recorder = recorder;
         _logger = logger;
     }
@@ -38,9 +46,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
     {
         try
         {
-            var bankId = _config["Hindsight:BankId"] ?? "destek-hatti-demo";
-            var endpointTemplate = _config["Hindsight:McpEndpoint"] ?? "http://localhost:8888/mcp/{bankId}/";
-            var endpoint = endpointTemplate.Replace("{bankId}", bankId);
+            var endpoint = _hindsightOptions.ResolveMcpEndpoint();
 
             var transport = new HttpClientTransport(new HttpClientTransportOptions
             {
@@ -61,10 +67,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
                 "Available Hindsight MCP tools matching retain/recall/reflect: {Tools}",
                 string.Join(", ", tools.Select(t => t.Name)));
 
-            var ollamaBaseUrl = _config["Ollama:BaseUrl"] ?? "http://localhost:11434";
-            var model = _config["Ollama:Model"] ?? "llama3.2:latest";
-
-            IChatClient chatClient = new OllamaApiClient(new Uri(ollamaBaseUrl), model);
+            IChatClient chatClient = new OllamaApiClient(new Uri(_ollamaOptions.BaseUrl), _ollamaOptions.Model);
 
             var systemMessage = await File.ReadAllTextAsync(
                 Path.Combine(AppContext.BaseDirectory, "system_message.txt"), cancellationToken);
@@ -83,11 +86,10 @@ public sealed class HindsightAgentService : IAsyncDisposable
             // that omits Tools silently wipes the agent's configured tools for that call
             // (see https://github.com/microsoft/agent-framework/issues/1453), so Tools is
             // re-specified here even though it's identical to what the agent already has.
-            var temperature = _config.GetValue<float?>("Ollama:Temperature") ?? 0.3f;
             _runOptions = new ChatClientAgentRunOptions(new ChatOptions
             {
                 Tools = tools,
-                Temperature = temperature,
+                Temperature = _ollamaOptions.Temperature,
             });
 
             // ChatClientAgent wraps our IChatClient in its own pipeline (approval handling,
@@ -115,7 +117,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
 
             _logger.LogInformation(
                 "Hindsight agent initialized with {ToolCount} tools from {Endpoint} (temperature={Temperature})",
-                tools.Count, endpoint, temperature);
+                tools.Count, endpoint, _ollamaOptions.Temperature);
         }
         catch (Exception ex)
         {

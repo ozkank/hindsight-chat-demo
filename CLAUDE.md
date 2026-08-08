@@ -42,3 +42,22 @@ Context for anyone (human or AI) making changes to this project.
   returns its best-effort ranked matches from the given bank, even weak ones — it never
   returns an empty list just because nothing is truly relevant. So "prove bank A can't see
   bank B's data" has to check *which* facts came back, not how many.
+- The .NET app talks to Hindsight two ways on purpose, not by accident: MCP
+  (`Services/HindsightAgentService.cs`) for the LLM-driven write path, and a typed REST
+  client (`HindsightClient/`) for the direct read path (`GET /api/memories`, the sidebar's
+  "Hafızayı REST'ten oku" button). See "Two ways to talk to Hindsight" in
+  [README.md](README.md). Hindsight's `GET /v1/default/banks/{bank_id}/memories/list`
+  endpoint isn't in the official docs page — found by reading `/openapi.json` off the
+  running container.
+- Configuration is bound via the Options pattern (`Configuration/OllamaOptions.cs`,
+  `Configuration/HindsightOptions.cs`) with `ValidateOnStart()`, not raw
+  `IConfiguration["Section:Key"]` reads. If you add a new setting, add it to the matching
+  options class (with a `[Required]`/`[Range]` attribute if it must be present), not as a
+  new ad hoc `_config[...]` call.
+- `/api/health` is wired through ASP.NET Core's Health Checks middleware
+  (`Endpoints/HealthEndpoints.cs`) with a custom `ResponseWriter`, not a hand-rolled HTTP
+  call. Gotcha if you touch it: a `JsonSerializer.Serialize(...)` call written by hand
+  does **not** pick up ASP.NET Core's default camelCase policy the way `Results.Ok(...)`
+  does — it needs `new JsonSerializerOptions(JsonSerializerDefaults.Web)` passed in
+  explicitly, or the response silently reverts to PascalCase and breaks anything (the UI,
+  `DEMO.md`'s checklist) expecting `healthy`/`api`/`hindsight` lowercase.

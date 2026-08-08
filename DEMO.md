@@ -29,6 +29,10 @@ biraz yavaş gelebiliyor (bazen ~1 dakikaya kadar), sunum sırasında sabırlı 
    etiketi görünür.
 5. Sağ üstteki linkten Hindsight Admin UI'ı açıp (`http://localhost:9999`) kaydedilen hafızayı
    canlı olarak gösterebilirsin.
+6. Sol menüdeki **"📖 Hafızayı REST'ten oku"** butonuna bas. Burada mimariyi anlat: agent,
+   Microsoft Agent Framework + MCP üzerinden yazıyor (adım 1-4), bu buton ise aynı bankayı
+   düz bir REST çağrısıyla, MCP ve LLM hiç devreye girmeden okuyor (`IHindsightRestClient`,
+   `HindsightClient/` klasörü). İki entegrasyon yolunu yan yana göstermek için iyi bir an.
 
 **İpucu:** Tek bir net, tercih/bilgi bildiren cümle kullan (ör. adım 1'deki gibi). Bir mesajda
 birden fazla ayrı bilgi (ör. hem şikayet hem adres değişikliği) daha az güvenilir. Her

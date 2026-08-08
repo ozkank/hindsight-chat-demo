@@ -91,6 +91,63 @@ body {
   font-size: 11px;
 }
 
+.memory-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.memory-viewer-btn {
+  background: var(--bg-elevated-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+
+.memory-viewer-btn:hover {
+  border-color: var(--accent);
+}
+
+.memory-viewer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.memory-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memory-item {
+  background: var(--bg-elevated-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.memory-item .memory-text {
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.memory-empty {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
 .sidebar-footer {
   margin-top: auto;
 }
@@ -281,7 +338,8 @@ body {
     display: none;
   }
 
-  .session-info {
+  .session-info,
+  .memory-viewer {
     display: none;
   }
 

@@ -69,7 +69,7 @@
     <rect x="-27" y="-10" width="6" height="12" rx="3" fill="#c7d2fe"/>
     <rect x="21" y="-10" width="6" height="12" rx="3" fill="#c7d2fe"/>
   </g>
-  <text x="795" y="230" font-size="14" text-anchor="middle" fill="#334155">/api/chat · /api/health</text>
+  <text x="795" y="230" font-size="13" text-anchor="middle" fill="#334155">/api/chat · /api/memories · /api/health</text>
   <text x="795" y="248" font-size="11" text-anchor="middle" fill="#94a3b8">ToolCallRecorder</text>
 
   <!-- framework bullet: simple diamond, no emoji -->
@@ -98,9 +98,13 @@
   <!-- Ollama <-> Hindsight -->
   <line x1="238" y1="325" x2="317" y2="325" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
 
-  <!-- Hindsight <-> Agent : MCP Protocol -->
+  <!-- Hindsight <-> Agent : MCP Protocol (agent WRITES: retain/recall/reflect tool calls) -->
   <line x1="558" y1="290" x2="662" y2="200" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
   <text x="558" y="235" font-size="15" fill="#1e3a5f" font-weight="bold" transform="rotate(-35 558 235)">MCP Protocol</text>
+
+  <!-- Hindsight <-> Agent : plain REST (agent READS: IHindsightRestClient, no MCP/LLM) -->
+  <line x1="558" y1="345" x2="630" y2="332" stroke="#0e7490" stroke-width="2.2" stroke-dasharray="6 5" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="595" y="405" font-size="14" fill="#0e7490" font-weight="bold">REST · /memories</text>
 
   <!-- Agent <-> Ollama : curved, native api/chat -->
   <path d="M 665 250 C 500 460, 260 460, 155 383" fill="none" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
