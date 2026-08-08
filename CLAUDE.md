@@ -54,6 +54,21 @@ Context for anyone (human or AI) making changes to this project.
   `IConfiguration["Section:Key"]` reads. If you add a new setting, add it to the matching
   options class (with a `[Required]`/`[Range]` attribute if it must be present), not as a
   new ad hoc `_config[...]` call.
+- `Services/GreetingDetector.cs` short-circuits bare greetings ("merhaba", "selam", ...)
+  before they reach the agent. Found by testing: `llama3.1:8b` reliably (4/4) calls
+  `retain` with garbled content on a bare greeting, even though the system prompt
+  explicitly forbids it. Three rounds of prompt hardening — adding the rule, adding
+  concrete examples, moving it to the first paragraph in all caps — all still failed 4/4.
+  This is a real model limitation on short/low-information input, not a prompt-wording
+  problem; don't try to fix it by editing `system_message.txt` again, it won't work.
+  `GreetingDetector` only matches messages that are *entirely* a known greeting, so
+  anything with real content ("Merhaba, ben Ahmet, ...") still reaches the agent normally.
+- Ollama evicts an idle model from memory after 5 minutes by default, so the first message
+  after a pause (e.g. mid-demo, while explaining something) pays a full reload. Fixed by
+  setting `OLLAMA_KEEP_ALIVE=30m` for the Ollama app (`launchctl setenv OLLAMA_KEEP_ALIVE
+  "30m"`, then restart Ollama.app) — not a project file, a machine-level setting, so it
+  needs to be redone on a new machine. Verify with `ollama ps`: the `UNTIL` column should
+  show ~30 minutes, not ~5.
 - `/api/health` is wired through ASP.NET Core's Health Checks middleware
   (`Endpoints/HealthEndpoints.cs`) with a custom `ResponseWriter`, not a hand-rolled HTTP
   call. Gotcha if you touch it: a `JsonSerializer.Serialize(...)` call written by hand

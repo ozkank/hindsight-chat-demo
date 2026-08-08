@@ -134,6 +134,14 @@ public sealed class HindsightAgentService : IAsyncDisposable
             throw new InvalidOperationException($"Hindsight agent not ready: {_initError?.Message ?? "unknown error"}");
         }
 
+        // See GreetingDetector's doc comment: this model reliably mis-fires retain with
+        // garbled content on bare greetings, and prompt-only fixes didn't help. Short-circuit
+        // before the message ever reaches the model.
+        if (GreetingDetector.IsGreetingOnly(message))
+        {
+            return (GreetingDetector.PickReply(sessionId), []);
+        }
+
         var session = await GetOrCreateSessionAsync(sessionId, cancellationToken);
 
         _recorder.BeginCapture();
