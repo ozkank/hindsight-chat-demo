@@ -100,6 +100,11 @@ public sealed class HindsightAgentService : IAsyncDisposable
             {
                 functionInvokingClient.FunctionInvoker = async (context, cancellationToken) =>
                 {
+                    if (context.Function.Name is "recall" or "reflect")
+                    {
+                        EnforceMinimumMaxTokens(context.Arguments, context.Function.Name);
+                    }
+
                     _logger.LogInformation("Invoking tool {ToolName}", context.Function.Name);
                     var result = await context.Function.InvokeAsync(context.Arguments, cancellationToken);
                     var arguments = context.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -149,6 +154,33 @@ public sealed class HindsightAgentService : IAsyncDisposable
         var toolCalls = _recorder.EndCapture();
 
         return (response.Text, toolCalls);
+    }
+
+    // Found by testing: the model sometimes picks a tiny max_tokens for recall/reflect
+    // (seen as low as 10) -- Hindsight then has no room to fit even one fact and returns
+    // zero results, which the agent (correctly, but unhelpfully) reports as "I don't know."
+    // Verified directly against Hindsight's REST API: the exact same query returned 0
+    // results at max_tokens=10 and 1 correct result at max_tokens=1024. This clamps the
+    // argument up before the call goes out, the same pattern as GreetingDetector -- a
+    // proven model quirk fixed in code rather than by asking the prompt to behave.
+    private const int MinRecallMaxTokens = 500;
+
+    private void EnforceMinimumMaxTokens(AIFunctionArguments arguments, string toolName)
+    {
+        if (!arguments.TryGetValue("max_tokens", out var raw) || raw is null)
+        {
+            return;
+        }
+
+        if (!int.TryParse(raw.ToString(), out var requested) || requested >= MinRecallMaxTokens)
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "{Tool} requested max_tokens={Requested}, too small to return any real content -- raising it to {Min}.",
+            toolName, requested, MinRecallMaxTokens);
+        arguments["max_tokens"] = MinRecallMaxTokens;
     }
 
     private async Task<AgentSession> GetOrCreateSessionAsync(string sessionId, CancellationToken cancellationToken)

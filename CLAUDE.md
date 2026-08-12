@@ -69,6 +69,14 @@ Context for anyone (human or AI) making changes to this project.
   "30m"`, then restart Ollama.app) — not a project file, a machine-level setting, so it
   needs to be redone on a new machine. Verify with `ollama ps`: the `UNTIL` column should
   show ~30 minutes, not ~5.
+- `HindsightAgentService.EnforceMinimumMaxTokens` clamps `recall`/`reflect`'s `max_tokens`
+  argument up to 500 before the call goes out. Found by testing: the model sometimes picks
+  a tiny value (seen as low as 1 and 10) for that argument, and Hindsight then has no room
+  to fit even one fact, returning zero results — the agent then gives a vague "I don't have
+  that information" answer that looks like a memory failure but isn't one. Verified directly
+  against Hindsight's REST API: the identical query returned 0 results at `max_tokens=10`
+  and 1 correct result at `max_tokens=1024`. Same pattern as `GreetingDetector` — a proven
+  model quirk fixed in code, not by asking the prompt to behave differently.
 - `/api/health` is wired through ASP.NET Core's Health Checks middleware
   (`Endpoints/HealthEndpoints.cs`) with a custom `ResponseWriter`, not a hand-rolled HTTP
   call. Gotcha if you touch it: a `JsonSerializer.Serialize(...)` call written by hand
