@@ -7,29 +7,13 @@ three core operations during a conversation — with every tool call surfaced li
 
 - `retain` — writes a durable fact to memory.
 - `recall` — reads back one specific fact in a later, unrelated session.
-- `reflect` — combines multiple facts, observations, and past conversations into a single
-  synthesized answer (e.g. "how has this customer's experience been overall?").
+- `reflect` — combines multiple facts into a single synthesized answer.
 
 ## Architecture
 
 Everything runs locally — no cloud LLM, no external API keys.
 
 ![Architecture diagram: browser talks HTTP to the HindsightChatDemo Agent (ASP.NET Core + Microsoft Agent Framework), which talks MCP Protocol to Hindsight and native api/chat to Ollama for tool-calling; Hindsight also uses Ollama for its own fact extraction — all inside a single Local boundary.](docs/architecture.svg)
-
-- The **agent** (`applications/HindsightChatDemo/`) is the only piece with custom code. It
-  holds the conversation, decides — via the LLM's tool calls — when to invoke `retain`,
-  `recall`, or `reflect`, and returns both the reply and the tool-call log to the browser.
-- **Ollama** serves two different consumers with the same local model: the agent's own
-  chat/tool-calling loop, and Hindsight's internal fact-extraction pipeline (see
-  `HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml`).
-- **Hindsight is reached two different ways, deliberately**, to demo both integration
-  styles side by side:
-  - **MCP** (Model Context Protocol) — the agent discovers `retain`/`recall`/`reflect` as
-    tools at startup and the *LLM* decides when to call them. This is how the chat
-    WRITES memory.
-  - **Plain REST** — `IHindsightRestClient` (`HindsightClient/`) calls Hindsight's HTTP
-    API directly, no MCP and no LLM involved. The sidebar's "Hafızayı REST'ten oku" button
-    uses this to READ memory. See "Two ways to talk to Hindsight" below.
 
 ## Prerequisites
 
@@ -54,109 +38,37 @@ agent are up.
 
 ## Configuration
 
-Everything is driven by `appsettings.json` — no URLs or model names are hardcoded. Settings
-are bound to typed, validated options classes (`Configuration/OllamaOptions.cs`,
-`Configuration/HindsightOptions.cs`) instead of read ad hoc by key, so a missing or
-malformed value fails at startup rather than deep inside a request.
+Everything is driven by `appsettings.json` — no URLs or model names are hardcoded.
 
 | Key | Description |
 |---|---|
-| `Ollama:BaseUrl` | Ollama's native API address (no `/v1` — see below) |
+| `Ollama:BaseUrl` | Ollama's native API address |
 | `Ollama:Model` | Must match `HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml` |
-| `Ollama:Temperature` | Lower values noticeably improve tool-call reliability (see below) |
-| `Hindsight:McpEndpoint` | `{bankId}` is replaced with `Hindsight:BankId`; used by the MCP-based agent |
-| `Hindsight:BankId` | Hindsight memory namespace; all sessions in this demo share one, so `recall` in a new session can find what `retain` wrote in a previous one |
-| `Hindsight:RestBaseUrl` | Base address for `IHindsightRestClient` — same host as `McpEndpoint`, reached directly over HTTP |
-| `Hindsight:AdminUiUrl` | Shown in the UI as a link to Hindsight's own Admin dashboard |
+| `Ollama:Temperature` | Lower values improve tool-call reliability |
+| `Hindsight:McpEndpoint` | `{bankId}` is replaced with `Hindsight:BankId` |
+| `Hindsight:BankId` | Hindsight memory namespace; all sessions share one |
+| `Hindsight:RestBaseUrl` | Base address for the direct REST read path |
+| `Hindsight:AdminUiUrl` | Link to Hindsight's own Admin dashboard, shown in the UI |
 
-### Why the native Ollama API, not the OpenAI-compatible one
+## How it works
 
-The OpenAI-compatible `/v1` endpoint on this project's original test setup (Ollama 0.32.5)
-returned tool calls as malformed text inside `content` instead of a structured `tool_calls`
-field — the model was calling `retain`/`recall` correctly, but the response format wasn't
-recognized as a tool call. Ollama's native `/api/chat` endpoint handled the same request
-correctly, so the app connects through
-[OllamaSharp](https://github.com/awaescher/OllamaSharp)'s `OllamaApiClient` instead of the
-OpenAI SDK. If a newer Ollama version fixes the compat layer, swap it back in
-`applications/HindsightChatDemo/Services/HindsightAgentService.cs`.
-
-## Project layout
-
-```
-docker-compose.hindsight.yml                     Hindsight (API + MCP + Admin UI, persistent volume)
-applications/HindsightChatDemo/
-  Program.cs                                     Composition root only: DI, middleware, endpoint mapping
-  Configuration/OllamaOptions.cs                 Typed, validated "Ollama" settings
-  Configuration/HindsightOptions.cs              Typed, validated "Hindsight" settings
-  Endpoints/ChatEndpoints.cs                     POST /api/chat, GET /api/config (the MCP path)
-  Endpoints/MemoryEndpoints.cs                   GET /api/memories (the REST path)
-  Endpoints/HealthEndpoints.cs                   GET /api/health (wraps ASP.NET Core Health Checks)
-  HealthChecks/AgentHealthCheck.cs               Is the MCP agent ready?
-  HealthChecks/HindsightRestHealthCheck.cs       Is Hindsight reachable? (via IHindsightRestClient)
-  HindsightClient/IHindsightRestClient.cs        Hindsight's REST API, no MCP/LLM in the loop
-  HindsightClient/HindsightRestClient.cs         Typed HttpClient implementation
-  HindsightClient/Models.cs                      REST response DTOs (health, memory records)
-  Services/HindsightAgentService.cs              MCP connection, agent construction, session management
-  Services/ToolCallRecorder.cs                   Captures retain/recall/reflect calls per request (AsyncLocal)
-  Models/ChatModels.cs                           Chat request/response DTOs
-  system_message.txt                             Agent system prompt (retain/recall/reflect rules)
-  wwwroot/                                       Chat UI (vanilla HTML/JS/CSS)
-explainer/                                       Standalone Jupyter notebooks (no LLM tool-calling in the loop)
-```
-
-`POST /api/chat` takes `{ message, userId, sessionId }` and returns
-`{ message, toolCalls, sessionId }`, where `toolCalls` lists every retain/recall/reflect
-invoked while handling that request — this is what the UI renders as a memory-activity tag
-under each message. Sessions are held in memory per process (no database); starting a new
-session gets a fresh `AgentSession` but keeps the same Hindsight `bankId`.
-
-### Two ways to talk to Hindsight
-
-The app deliberately shows both integration styles Hindsight supports:
-
-| | MCP (writes) | REST (reads) |
-|---|---|---|
-| Endpoint | `POST /api/chat` | `GET /api/memories` |
-| Code | `Services/HindsightAgentService.cs` | `HindsightClient/HindsightRestClient.cs` |
-| Who decides to call it | The LLM, via tool-calling | The caller, directly |
-| Framework piece shown | Microsoft Agent Framework + MCP C# SDK | Typed `HttpClient` (`AddHttpClient<TInterface, TImpl>`) |
-
-Click "Hafızayı REST'ten oku" in the sidebar to fetch the bank's most recent memories
-straight over HTTP — the same data `retain` just wrote through MCP, read back a completely
-different way.
-
-### API surface
-
-- `GET /api/health` — backed by ASP.NET Core's Health Checks middleware
-  (`Endpoints/HealthEndpoints.cs`), aggregating `AgentHealthCheck` and
-  `HindsightRestHealthCheck` into the same `{ healthy, api, hindsight }` shape the UI and
-  `DEMO.md`'s checklist expect.
-- `GET /openapi/v1.json` — .NET 9's built-in OpenAPI document generation, useful to browse
-  the API shape during a presentation without extra tooling.
+1. The browser sends a chat message to `POST /api/chat`.
+2. The agent reads the message and decides whether it needs `retain`, `recall`, `reflect`,
+   or just a plain reply.
+3. If a tool is needed, the agent calls it over MCP. Hindsight runs it and returns a result.
+4. The agent turns that result into a natural-language reply and sends it back, along with
+   a log of every tool call it made.
+5. The UI shows the reply plus a colored tag for each tool call — that tag is the actual
+   proof memory was written or read.
+6. A new session keeps the same Hindsight bank, so `recall`/`reflect` there can still find
+   what an earlier session wrote.
 
 ## Known limitations
 
-Tool-call reliability with small local models is sensitive to the model, the temperature,
-and message framing. Three models were tested with the same battery of prompts (single-fact
-`retain`, fresh-session `recall`, fresh-session `reflect`, each repeated 3-4 times):
-
-| Model | `retain` | `recall` | `reflect` fires | `reflect` stays in Turkish |
-|---|---|---|---|---|
-| `llama3.2:latest` (3B) | reliable | unreliable | unreliable | n/a |
-| `qwen2.5:latest` (7B) | reliable | unreliable (~1/8) | reliable | unreliable (leaked Chinese) |
-| `llama3.1:8b` (current default) | reliable | reliable (3/3) | reliable (3/3) | reliable (3/3) |
-
-`llama3.1:8b` was the clear winner and is the current default. It is noticeably slower per
-reply than `qwen2.5` (occasionally near a minute), which is an acceptable trade-off for a
-live demo. `Ollama:Temperature` at `0.3` measurably helped all three models.
-
-Even with `llama3.1:8b`, complex or multi-fact messages (e.g. a complaint and an address
-change in one sentence) are less reliable than a single, clearly-stated fact — keep demo
-messages to one fact per turn. And `reflect`'s synthesized answer is sometimes generic
-rather than grounded in the specific stored fact, even when the tool call itself succeeds.
-
-For a live demo, treat the memory-activity tag as the artifact of record; the model's prose
-around it may occasionally be imperfect.
+Small local models vary a lot in tool-call reliability. `llama3.1:8b` (the default) was the
+most reliable in testing; smaller models frequently skipped `recall`/`reflect` or leaked
+another language into the reply. See [CLAUDE.md](CLAUDE.md) for the full comparison and
+other model quirks found along the way.
 
 ## Demo script
 
@@ -165,8 +77,6 @@ See [DEMO.md](DEMO.md) for the presentation scenario and a pre-demo checklist.
 ## Quickstart notebooks
 
 [`explainer/`](explainer/) has two Jupyter notebooks using the official `hindsight-client`
-Python package — same structure as
-[Hindsight's own cookbook](https://github.com/vectorize-io/hindsight-cookbook), with our
-own example. They call `retain`/`recall`/`reflect` directly with no LLM deciding when to
-use them, so every run behaves the same way. Good as a "how the engine works" primer
-before the live chat demo — see [explainer/README.md](explainer/README.md).
+Python package, calling `retain`/`recall`/`reflect` directly with no LLM deciding when to
+use them — a "how the engine works" primer before the live chat demo. See
+[explainer/README.md](explainer/README.md).

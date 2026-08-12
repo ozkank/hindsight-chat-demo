@@ -10,7 +10,7 @@ kaydı sentezleyip değerlendirme yap) — canlı olarak, farklı oturumlar aras
 
 **Model notu:** varsayılan model `llama3.1:8b`. Bu model, testlerde `qwen2.5` ve
 `llama3.2`'den çok daha güvenilir çıktı (retain/recall/reflect'in üçü de 3/3-4/4 tetiklendi,
-Çince'ye kayma hiç görülmedi) — bkz. README "Known limitations". Tek dezavantajı: cevaplar
+Çince'ye kayma hiç görülmedi) — bkz. [CLAUDE.md](CLAUDE.md) için tam karşılaştırma. Tek dezavantajı: cevaplar
 biraz yavaş gelebiliyor (bazen ~1 dakikaya kadar), sunum sırasında sabırlı ol, boşluğu
 "Hindsight arka planda kontrol ediyor" diye doldurabilirsin.
 

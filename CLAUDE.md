@@ -12,13 +12,23 @@ Context for anyone (human or AI) making changes to this project.
   `Ollama:Model` in `applications/HindsightChatDemo/appsettings.json` — they should point
   at the same model.
 - Default model is `llama3.1:8b`, chosen after testing `llama3.2:latest` (3B) and
-  `qwen2.5:latest` (7B) with the same prompt battery. `llama3.1:8b` was the only one that
-  reliably triggered `recall` and kept `reflect`'s answers in Turkish — see "Known
-  limitations" in [README.md](README.md) for the numbers. It is slower per reply than the
-  smaller models; that trade-off was accepted for reliability.
+  `qwen2.5:latest` (7B) with the same prompt battery (single-fact `retain`, fresh-session
+  `recall`, fresh-session `reflect`, each repeated 3-4 times):
+
+  | Model | `retain` | `recall` | `reflect` fires | `reflect` stays in Turkish |
+  |---|---|---|---|---|
+  | `llama3.2:latest` (3B) | reliable | unreliable | unreliable | n/a |
+  | `qwen2.5:latest` (7B) | reliable | unreliable (~1/8) | reliable | unreliable (leaked Chinese) |
+  | `llama3.1:8b` (current default) | reliable | reliable (3/3) | reliable (3/3) | reliable (3/3) |
+
+  `llama3.1:8b` was the clear winner. It's noticeably slower per reply than `qwen2.5`
+  (occasionally near a minute); that trade-off was accepted for reliability. Even with
+  `llama3.1:8b`, complex/multi-fact messages are less reliable than a single clearly-stated
+  fact, and `reflect`'s synthesized answer is sometimes generic rather than grounded in the
+  specific stored fact even when the tool call itself succeeds — treat the UI's
+  memory-activity tag as the artifact of record, not the model's prose around it.
 - `Ollama:Temperature` defaults to `0.3`. Lower temperature measurably improved tool-call
-  reliability for retain/recall with small local models — see "Known limitations" in
-  [README.md](README.md).
+  reliability for retain/recall with small local models.
 - The chat client connects to Ollama's **native** `/api/chat` API via
   [OllamaSharp](https://github.com/awaescher/OllamaSharp), not the OpenAI-compatible `/v1`
   endpoint. On this project's original test environment (Ollama 0.32.5), the OpenAI-compat
@@ -43,12 +53,12 @@ Context for anyone (human or AI) making changes to this project.
   returns an empty list just because nothing is truly relevant. So "prove bank A can't see
   bank B's data" has to check *which* facts came back, not how many.
 - The .NET app talks to Hindsight two ways on purpose, not by accident: MCP
-  (`Services/HindsightAgentService.cs`) for the LLM-driven write path, and a typed REST
-  client (`HindsightClient/`) for the direct read path (`GET /api/memories`, the sidebar's
-  "Hafızayı REST'ten oku" button). See "Two ways to talk to Hindsight" in
-  [README.md](README.md). Hindsight's `GET /v1/default/banks/{bank_id}/memories/list`
-  endpoint isn't in the official docs page — found by reading `/openapi.json` off the
-  running container.
+  (`Services/HindsightAgentService.cs`) for the LLM-driven write path (the LLM decides when
+  to call `retain`/`recall`/`reflect`), and a typed REST client (`HindsightClient/`) for the
+  direct read path (`GET /api/memories`, the sidebar's "Hafızayı REST'ten oku" button — no
+  MCP, no LLM involved). DEMO.md's step 6 uses this contrast as a presentation beat.
+  Hindsight's `GET /v1/default/banks/{bank_id}/memories/list` endpoint isn't in the official
+  docs page — found by reading `/openapi.json` off the running container.
 - Configuration is bound via the Options pattern (`Configuration/OllamaOptions.cs`,
   `Configuration/HindsightOptions.cs`) with `ValidateOnStart()`, not raw
   `IConfiguration["Section:Key"]` reads. If you add a new setting, add it to the matching
