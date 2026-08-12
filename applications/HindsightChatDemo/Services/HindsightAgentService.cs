@@ -26,6 +26,12 @@ public sealed class HindsightAgentService : IAsyncDisposable
     private McpClient? _mcpClient;
     private ChatClientAgentRunOptions? _runOptions;
     private Exception? _initError;
+    private AIFunction? _retainTool;
+
+    // Carries the raw user message into the FunctionInvoker closure below, scoped per
+    // request via AsyncLocal (same pattern as ToolCallRecorder) since this service is a
+    // singleton and requests can run concurrently.
+    private readonly AsyncLocal<string?> _currentMessage = new();
 
     public HindsightAgentService(
         IOptions<OllamaOptions> ollamaOptions,
@@ -67,6 +73,14 @@ public sealed class HindsightAgentService : IAsyncDisposable
                 "Available Hindsight MCP tools matching retain/recall/reflect: {Tools}",
                 string.Join(", ", tools.Select(t => t.Name)));
 
+            _retainTool = tools.OfType<AIFunction>().FirstOrDefault(t => t.Name == "retain");
+            if (_retainTool is null)
+            {
+                _logger.LogWarning(
+                    "Could not find the retain tool among the loaded MCP tools; the " +
+                    "misrouted-recall safety net (see DeclarativeStatementDetector) will be disabled.");
+            }
+
             IChatClient chatClient = new OllamaApiClient(new Uri(_ollamaOptions.BaseUrl), _ollamaOptions.Model);
 
             var systemMessage = await File.ReadAllTextAsync(
@@ -103,6 +117,11 @@ public sealed class HindsightAgentService : IAsyncDisposable
                     if (context.Function.Name is "recall" or "reflect")
                     {
                         EnforceMinimumMaxTokens(context.Arguments, context.Function.Name);
+                    }
+
+                    if (context.Function.Name == "recall")
+                    {
+                        await GuardAgainstMisroutedNewFactAsync(cancellationToken);
                     }
 
                     _logger.LogInformation("Invoking tool {ToolName}", context.Function.Name);
@@ -149,9 +168,11 @@ public sealed class HindsightAgentService : IAsyncDisposable
 
         var session = await GetOrCreateSessionAsync(sessionId, cancellationToken);
 
+        _currentMessage.Value = message;
         _recorder.BeginCapture();
         var response = await _agent.RunAsync(message, session, _runOptions, cancellationToken);
         var toolCalls = _recorder.EndCapture();
+        _currentMessage.Value = null;
 
         return (response.Text, toolCalls);
     }
@@ -181,6 +202,45 @@ public sealed class HindsightAgentService : IAsyncDisposable
             "{Tool} requested max_tokens={Requested}, too small to return any real content -- raising it to {Min}.",
             toolName, requested, MinRecallMaxTokens);
         arguments["max_tokens"] = MinRecallMaxTokens;
+    }
+
+    // Found by testing: llama3.1:8b sometimes calls recall for a message that is actually a
+    // brand-new fact, not a reference to something already said -- e.g. "geçen hafta
+    // taşındım" ("I moved last week") gets routed to recall instead of retain, purely because
+    // it shares the phrase "geçen hafta" with the recall example in system_message.txt. When
+    // that happens the new fact is silently never saved. Same class of issue as
+    // GreetingDetector: a real model limitation on surface-pattern matching, not something a
+    // prompt rewrite reliably fixes (see CLAUDE.md). We can't stop the model from calling
+    // recall once it's decided to, so instead this makes sure the fact still gets saved: if
+    // the message doesn't look like an actual question/reference (see
+    // DeclarativeStatementDetector), retain is called too, alongside recall. A redundant
+    // retain is harmless -- Hindsight's own consolidation step dedupes it against anything
+    // already stored -- but a silently dropped fact is not.
+    private async Task GuardAgainstMisroutedNewFactAsync(CancellationToken cancellationToken)
+    {
+        var message = _currentMessage.Value;
+        if (string.IsNullOrWhiteSpace(message) || _retainTool is null)
+        {
+            return;
+        }
+
+        if (DeclarativeStatementDetector.LooksLikeQuestion(message))
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "recall was called for a message with no question markers ('{Message}') -- likely " +
+            "a misrouted new fact. Calling retain as a safety net so it isn't lost.", message);
+
+        var safetyNetArgs = new AIFunctionArguments
+        {
+            ["content"] = message,
+            ["context"] = "otomatik yedek kayıt (recall yanlış tetiklendi)",
+        };
+
+        await _retainTool.InvokeAsync(safetyNetArgs, cancellationToken);
+        _recorder.Record("retain", safetyNetArgs.ToDictionary(kv => kv.Key, kv => kv.Value));
     }
 
     private async Task<AgentSession> GetOrCreateSessionAsync(string sessionId, CancellationToken cancellationToken)
