@@ -10,7 +10,12 @@ Context for anyone (human or AI) making changes to this project.
 - Hindsight's own LLM backend (used for fact extraction/consolidation) is configured via
   `HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml`. Keep it in sync with
   `Ollama:Model` in `applications/HindsightChatDemo/appsettings.json` — they should point
-  at the same model.
+  at the same model. Stays on Ollama on purpose: tried switching it to NVIDIA NIM on
+  2026-08-13 and both free-tier candidates failed at this specific job (see the comment in
+  `docker-compose.hindsight.yml` for the two different failure modes found). This is a
+  narrower, stricter use of the LLM than the chat agent's tool-calling (see `NvidiaNim`
+  notes below) — a model can be fine for one and fail the other, so don't assume "works for
+  the agent" implies "works for Hindsight's extraction," or vice versa.
 - Default model is `llama3.1:8b`, chosen after testing `llama3.2:latest` (3B) and
   `qwen2.5:latest` (7B) with the same prompt battery. `llama3.1:8b` was the only one that
   reliably triggered `recall` and kept `reflect`'s answers in Turkish — see "Known
@@ -89,24 +94,60 @@ Context for anyone (human or AI) making changes to this project.
   - `NvidiaNim:ApiKey` must be set via the `NvidiaNim__ApiKey` environment variable (or
     `dotnet user-secrets`), never committed to `appsettings.json`. Get a free key at
     build.nvidia.com — no credit card needed.
-  - Default model is `nvidia/nemotron-3.5-lightning-30b-a3b`: on build.nvidia.com's own
-    Model Card it's the only free-endpoint model checked so far with "Function Calling:
-    Supported" confirmed (needed for `retain`/`recall`/`reflect`), 1M context, and it's
-    NVIDIA's own model billed as the fastest in its size class for agentic tasks. Other
-    catalog models (`glm-5.2`, `minimax-m3`, `step-3.7-flash`, ...) look promising but their
-    function-calling support wasn't verified — check the Model Card before switching to one.
+  - Default model is `meta/llama-3.1-8b-instruct` — the cloud-hosted version of the exact
+    model already used locally via `Ollama:Model` (`llama3.1:8b`), on the theory that same
+    weights means the retain/recall/reflect tool-call behavior already validated locally
+    (see the `llama3.1:8b` note above) is more likely to carry over than switching to an
+    unrelated model. Confirmed on build.nvidia.com's own Model Card as "Function Calling:
+    Supported" (needed for `retain`/`recall`/`reflect`), free endpoint, 128k context. Was
+    previously `nvidia/nemotron-3.5-lightning-30b-a3b` (also function-calling-confirmed,
+    NVIDIA's own agentic-tuned model) — switched in favor of the exact local match; revisit
+    nemotron if the plain instruct model underperforms in testing. Other catalog models
+    (`glm-5.2`, `minimax-m3`, `step-3.7-flash`, ...) look promising but their function-calling
+    support wasn't verified — check the Model Card before switching to one.
   - Free tier: no credit card, ~40 requests/minute (plenty for a demo), but NVIDIA logs
     input/output on the free tier for product improvement — don't feed it real personal
     data, demo with made-up facts only.
-  - **Not yet run through the retain/recall/reflect prompt battery** (see model-comparison
-    notes above) — treat `NvidiaNim` as untested for tool-call reliability until it has been,
-    the same way every other model swap in this project needed that check before being
-    trusted for a demo. `Llm:Provider` defaults to `Ollama` precisely so nothing changes
-    for anyone who doesn't opt in.
+  - **Run through the retain/recall/reflect prompt battery on 2026-08-13** (same battery as
+    the model-comparison notes above, `meta/llama-3.1-8b-instruct` as the agent LLM, via
+    `/api/chat`): `retain` fired 3/3 (one call put the actual fact text in the wrong
+    argument — a content-quality slip, not a firing failure). `recall` fired 3/3 but only
+    2/3 came back as a structured tool call; the third try emitted the tool call as raw
+    JSON *text* in the reply instead — the exact malformed-tool-call failure mode already
+    documented above for Ollama's OpenAI-compat layer, reproduced here over NVIDIA's
+    OpenAI-compatible endpoint with a from-the-same-family model. All 3/3 `recall` replies
+    also leaked English narration of the function call ("The recall function was called
+    with...") instead of answering the customer in Turkish — `llama3.1:8b` locally was
+    3/3 reliable on this. `reflect` fired 3/3 and stayed in Turkish 3/3, but one call passed
+    `tags` as the string `"['hesap']"` instead of a real JSON array, which Hindsight's MCP
+    server rejected with a Pydantic `list_type` validation error server-side (see
+    `docker-compose.hindsight.yml` for the harder failure found when this same model was
+    tried as Hindsight's *own* extraction LLM, not just the agent's). Net: `NvidiaNim` with
+    this model is faster than local Ollama but not yet as reliable — treat it as a
+    known-imperfect trade-off, not a like-for-like replacement, until these specific
+    failure modes are fixed (e.g. re-serializing `tags` before the MCP call, or retrying
+    on malformed-text tool calls) or a more reliable free-tier model is found.
   - Ollama being unreachable is no longer the only offline failure mode: with
     `Llm:Provider=NvidiaNim`, no internet (or an unset/invalid API key) means no chat at
     all — there's no automatic fallback to Ollama mid-run. Confirm connectivity before a
     demo that relies on it.
+  - **The English-leak part of the above was fixed on 2026-08-14 via `system_message.txt`**
+    (not code) — added an explicit, early, all-caps "always answer in Turkish" rule with a
+    list of specific banned English tool-internals phrases, on the same theory as the
+    greeting-detector rule placement (see `GreetingDetector` note below): put the
+    highest-priority instruction first, in caps, with concrete examples. Unlike the
+    greeting-detector case, this one *did* work — re-ran the `recall` battery afterwards
+    and got 3/3 Turkish with no English, versus 0/3 before. One regression surfaced while
+    fixing it: the first draft included one concrete "correct" example sentence, and the
+    model started echoing that exact sentence back verbatim regardless of the actual
+    question (a known small-model failure mode — copying a few-shot example instead of
+    generalizing from it). Fixed by rewording the example as an obviously-a-template
+    bracketed pattern and adding an explicit "don't copy this verbatim, especially not its
+    topic" instruction. If you add more examples to this file, keep that in mind — a
+    concrete, complete example sentence is exactly the kind of thing a small model latches
+    onto. Content grounding (does the answer contain the *specific* recalled fact, e.g.
+    "e-posta") is still sometimes generic rather than precise — same known limitation
+    already documented for local `llama3.1:8b`, not something this fix targeted.
 - `/api/health` is wired through ASP.NET Core's Health Checks middleware
   (`Endpoints/HealthEndpoints.cs`) with a custom `ResponseWriter`, not a hand-rolled HTTP
   call. Gotcha if you touch it: a `JsonSerializer.Serialize(...)` call written by hand

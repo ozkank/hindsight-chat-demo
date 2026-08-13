@@ -8,11 +8,20 @@ Persona: bir çağrı merkezinin müşteri destek asistanı. Gösterilecek şey:
 temel işlemi — `retain` (yaz), `recall` (tek bir kaydı hatırla), `reflect` (birden fazla
 kaydı sentezleyip değerlendirme yap) — canlı olarak, farklı oturumlar arasında çalışıyor.
 
-**Model notu:** varsayılan model `llama3.1:8b`. Bu model, testlerde `qwen2.5` ve
-`llama3.2`'den çok daha güvenilir çıktı (retain/recall/reflect'in üçü de 3/3-4/4 tetiklendi,
-Çince'ye kayma hiç görülmedi) — bkz. README "Known limitations". Tek dezavantajı: cevaplar
-biraz yavaş gelebiliyor (bazen ~1 dakikaya kadar), sunum sırasında sabırlı ol, boşluğu
-"Hindsight arka planda kontrol ediyor" diye doldurabilirsin.
+**Model notu:** varsayılan `Llm:Provider` artık `NvidiaNim` (`meta/llama-3.1-8b-instruct`,
+bulutta). Yerel `llama3.1:8b`'den belirgin şekilde hızlı, ama testte küçük bir güvenilirlik
+sorunu bulundu: `recall`'da 3 denemeden 1'i düz metin olarak geldi (gerçek bir tool çağrısı
+değildi) — bkz. README "Known limitations" ve CLAUDE.md için tam sayılar. (Cevapların
+Türkçe yerine İngilizce'ye kayması ayrı bir sorundu, `system_message.txt` içindeki bir
+kuralla düzeltildi — artık recall/reflect cevapları güvenilir şekilde Türkçe kalıyor.)
+Bulutun **internet bağlantısı** gerektirdiğini
+unutma; bağlantı yoksa sohbet tamamen durur (yerel Ollama'ya otomatik geri dönüş yok).
+Daha güvenilir ama daha yavaş bir sunum istersen, `appsettings.json`'da `Llm:Provider`
+değerini `Ollama` yap — o zaman yerel `llama3.1:8b` kullanılır, cevaplar bazen ~1 dakikaya
+kadar sürebilir, sunum sırasında sabırlı ol.
+
+**Not:** Hindsight'ın kendi belleği (fact extraction) her zaman yerel Ollama'yı kullanır,
+`Llm:Provider` ne olursa olsun — bu yüzden Ollama'nın çalışıyor olması hâlâ gereklidir.
 
 **Önemli:** ilk mesaj tek başına "merhaba" gibi bir selamlaşma OLMAMALI — uygulama, saf
 selamlaşmaları modele hiç göndermeden hazır bir cevapla karşılıyor (bkz. CLAUDE.md,
@@ -58,7 +67,10 @@ cevap vermesine yol açabiliyor.
 
 - [ ] `docker ps` → `hindsight` container'ı `Up` durumda
 - [ ] `curl http://localhost:8888/health` → `"status":"healthy"`
-- [ ] `curl http://localhost:11434/api/tags` → kullanılacak model listede
+- [ ] İnternet bağlantısını doğrula (varsayılan `Llm:Provider=NvidiaNim` buluta gider,
+      yerel Ollama'ya otomatik geri dönüş yok) — bağlantı yoksa sohbet tamamen durur
+- [ ] `curl http://localhost:11434/api/tags` → Hindsight'ın kendi belleği için kullanılan
+      model (`llama3.1:8b`) listede — bu, `Llm:Provider` ayarından bağımsız hâlâ gereklidir
 - [ ] `ollama ps` → `UNTIL` sütunu ~30 dakika gösteriyor (5 dakika değil). Değilse:
       `launchctl setenv OLLAMA_KEEP_ALIVE "30m"` çalıştır, Ollama'yı yeniden başlat.
       Bu, mesajlar arasında ara verdiğinde modelin bellekten atılıp yeniden yüklenmesini

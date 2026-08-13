@@ -16,6 +16,15 @@ services:
       # Hindsight's own LLM backend (fact extraction/consolidation) — talks to the
       # same host Ollama instance the chat app uses. Keep the model name here in
       # sync with Ollama:Model in appsettings.json.
+      #
+      # Tried pointing this at NVIDIA NIM instead (2026-08-13): both free-tier
+      # candidates failed for this specific role. meta/llama-3.1-8b-instruct
+      # returned its JSON *schema* instead of extracted facts on 3/3 tries (fast,
+      # but 0 facts stored, every time). nvidia/nemotron-3.5-lightning-30b-a3b
+      # didn't fail outright but took 120s+ per attempt and needed retries — a
+      # single retain() stalled for minutes. Reverted to Ollama here, which has
+      # always worked reliably for this call. See CLAUDE.md for the full note
+      # before trying this again.
       HINDSIGHT_API_LLM_PROVIDER: ollama
       HINDSIGHT_API_LLM_BASE_URL: http://host.docker.internal:11434/v1
       HINDSIGHT_API_LLM_MODEL: llama3.1:8b

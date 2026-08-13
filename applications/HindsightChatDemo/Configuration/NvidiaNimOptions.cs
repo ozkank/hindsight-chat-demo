@@ -19,7 +19,7 @@ public sealed class NvidiaNimOptions
 
     /// <summary>Free-tier model with function calling support; see CLAUDE.md for how this was picked.</summary>
     [Required]
-    public string Model { get; set; } = "nvidia/nemotron-3.5-lightning-30b-a3b";
+    public string Model { get; set; } = "meta/llama-3.1-8b-instruct";
 
     /// <summary>
     /// Set via the NvidiaNim__ApiKey environment variable (or dotnet user-secrets), not
