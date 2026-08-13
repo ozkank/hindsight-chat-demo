@@ -77,6 +77,36 @@ Context for anyone (human or AI) making changes to this project.
   against Hindsight's REST API: the identical query returned 0 results at `max_tokens=10`
   and 1 correct result at `max_tokens=1024`. Same pattern as `GreetingDetector` — a proven
   model quirk fixed in code, not by asking the prompt to behave differently.
+- The chat backend is now a config switch, not a hard-coded `OllamaApiClient`:
+  `Llm:Provider` in `appsettings.json` picks `Ollama` (default) or `NvidiaNim`, each with
+  its own options class (`Configuration/OllamaOptions.cs`,
+  `Configuration/NvidiaNimOptions.cs`) and `HindsightAgentService.BuildChatClient()` builds
+  the matching `IChatClient`. This exists because local Ollama on `llama3.1:8b` is slow
+  enough per reply (see above) to hurt a live demo. `NvidiaNim` points at
+  [build.nvidia.com](https://build.nvidia.com)'s free, OpenAI-compatible NIM endpoints —
+  this is the exact `OpenAIClient(...).AsIChatClient()` swap flagged above, just wired as a
+  second provider instead of a hard replacement. Notes if you touch this:
+  - `NvidiaNim:ApiKey` must be set via the `NvidiaNim__ApiKey` environment variable (or
+    `dotnet user-secrets`), never committed to `appsettings.json`. Get a free key at
+    build.nvidia.com — no credit card needed.
+  - Default model is `nvidia/nemotron-3.5-lightning-30b-a3b`: on build.nvidia.com's own
+    Model Card it's the only free-endpoint model checked so far with "Function Calling:
+    Supported" confirmed (needed for `retain`/`recall`/`reflect`), 1M context, and it's
+    NVIDIA's own model billed as the fastest in its size class for agentic tasks. Other
+    catalog models (`glm-5.2`, `minimax-m3`, `step-3.7-flash`, ...) look promising but their
+    function-calling support wasn't verified — check the Model Card before switching to one.
+  - Free tier: no credit card, ~40 requests/minute (plenty for a demo), but NVIDIA logs
+    input/output on the free tier for product improvement — don't feed it real personal
+    data, demo with made-up facts only.
+  - **Not yet run through the retain/recall/reflect prompt battery** (see model-comparison
+    notes above) — treat `NvidiaNim` as untested for tool-call reliability until it has been,
+    the same way every other model swap in this project needed that check before being
+    trusted for a demo. `Llm:Provider` defaults to `Ollama` precisely so nothing changes
+    for anyone who doesn't opt in.
+  - Ollama being unreachable is no longer the only offline failure mode: with
+    `Llm:Provider=NvidiaNim`, no internet (or an unset/invalid API key) means no chat at
+    all — there's no automatic fallback to Ollama mid-run. Confirm connectivity before a
+    demo that relies on it.
 - `/api/health` is wired through ASP.NET Core's Health Checks middleware
   (`Endpoints/HealthEndpoints.cs`) with a custom `ResponseWriter`, not a hand-rolled HTTP
   call. Gotcha if you touch it: a `JsonSerializer.Serialize(...)` call written by hand

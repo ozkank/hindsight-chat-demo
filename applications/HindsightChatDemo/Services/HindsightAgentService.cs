@@ -1,3 +1,4 @@
+using System.ClientModel;
 using System.Collections.Concurrent;
 using HindsightChatDemo.Configuration;
 using Microsoft.Agents.AI;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using OllamaSharp;
+using OpenAI;
 using HindsightChatDemo.Models;
 
 namespace HindsightChatDemo.Services;
@@ -16,7 +18,9 @@ namespace HindsightChatDemo.Services;
 /// </summary>
 public sealed class HindsightAgentService : IAsyncDisposable
 {
+    private readonly LlmOptions _llmOptions;
     private readonly OllamaOptions _ollamaOptions;
+    private readonly NvidiaNimOptions _nvidiaNimOptions;
     private readonly HindsightOptions _hindsightOptions;
     private readonly ToolCallRecorder _recorder;
     private readonly ILogger<HindsightAgentService> _logger;
@@ -28,12 +32,16 @@ public sealed class HindsightAgentService : IAsyncDisposable
     private Exception? _initError;
 
     public HindsightAgentService(
+        IOptions<LlmOptions> llmOptions,
         IOptions<OllamaOptions> ollamaOptions,
+        IOptions<NvidiaNimOptions> nvidiaNimOptions,
         IOptions<HindsightOptions> hindsightOptions,
         ToolCallRecorder recorder,
         ILogger<HindsightAgentService> logger)
     {
+        _llmOptions = llmOptions.Value;
         _ollamaOptions = ollamaOptions.Value;
+        _nvidiaNimOptions = nvidiaNimOptions.Value;
         _hindsightOptions = hindsightOptions.Value;
         _recorder = recorder;
         _logger = logger;
@@ -67,7 +75,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
                 "Available Hindsight MCP tools matching retain/recall/reflect: {Tools}",
                 string.Join(", ", tools.Select(t => t.Name)));
 
-            IChatClient chatClient = new OllamaApiClient(new Uri(_ollamaOptions.BaseUrl), _ollamaOptions.Model);
+            var (chatClient, modelLabel, temperature) = BuildChatClient();
 
             var systemMessage = await File.ReadAllTextAsync(
                 Path.Combine(AppContext.BaseDirectory, "system_message.txt"), cancellationToken);
@@ -89,7 +97,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
             _runOptions = new ChatClientAgentRunOptions(new ChatOptions
             {
                 Tools = tools,
-                Temperature = _ollamaOptions.Temperature,
+                Temperature = temperature,
             });
 
             // ChatClientAgent wraps our IChatClient in its own pipeline (approval handling,
@@ -121,14 +129,48 @@ public sealed class HindsightAgentService : IAsyncDisposable
             _agent = agent;
 
             _logger.LogInformation(
-                "Hindsight agent initialized with {ToolCount} tools from {Endpoint} (temperature={Temperature})",
-                tools.Count, endpoint, _ollamaOptions.Temperature);
+                "Hindsight agent initialized with {ToolCount} tools from {Endpoint}, provider={Provider}, model={Model} (temperature={Temperature})",
+                tools.Count, endpoint, _llmOptions.Provider, modelLabel, temperature);
         }
         catch (Exception ex)
         {
             _initError = ex;
-            _logger.LogError(ex, "Failed to initialize Hindsight agent. Is Docker/Hindsight/Ollama running?");
+            _logger.LogError(ex, "Failed to initialize Hindsight agent. Is Docker/Hindsight running, and (if using {Provider}) is the LLM backend reachable?", _llmOptions.Provider);
         }
+    }
+
+    /// <summary>
+    /// Builds the IChatClient for whichever provider Llm:Provider selects. Ollama talks its
+    /// native /api/chat via OllamaSharp (see CLAUDE.md for why -- not the OpenAI-compat layer).
+    /// NvidiaNim is a genuinely OpenAI-compatible endpoint, so the OpenAI SDK talks to it
+    /// directly with just the base URL swapped -- this is the exact swap CLAUDE.md already
+    /// flagged as the escape hatch if OllamaApiClient ever needed replacing.
+    /// </summary>
+    private (IChatClient ChatClient, string ModelLabel, float Temperature) BuildChatClient() => _llmOptions.Provider switch
+    {
+        LlmProvider.NvidiaNim => BuildNvidiaNimChatClient(),
+        LlmProvider.Ollama => (
+            new OllamaApiClient(new Uri(_ollamaOptions.BaseUrl), _ollamaOptions.Model),
+            _ollamaOptions.Model,
+            _ollamaOptions.Temperature),
+        _ => throw new NotSupportedException($"Unknown Llm:Provider '{_llmOptions.Provider}'."),
+    };
+
+    private (IChatClient ChatClient, string ModelLabel, float Temperature) BuildNvidiaNimChatClient()
+    {
+        if (string.IsNullOrWhiteSpace(_nvidiaNimOptions.ApiKey))
+        {
+            throw new InvalidOperationException(
+                "Llm:Provider is NvidiaNim but NvidiaNim:ApiKey is not set. Get a free key at " +
+                "https://build.nvidia.com and set it via the NvidiaNim__ApiKey environment variable.");
+        }
+
+        var openAiClient = new OpenAIClient(
+            new ApiKeyCredential(_nvidiaNimOptions.ApiKey),
+            new OpenAIClientOptions { Endpoint = new Uri(_nvidiaNimOptions.BaseUrl) });
+
+        IChatClient chatClient = openAiClient.GetChatClient(_nvidiaNimOptions.Model).AsIChatClient();
+        return (chatClient, _nvidiaNimOptions.Model, _nvidiaNimOptions.Temperature);
     }
 
     public async Task<(string Message, IReadOnlyList<ToolCallInfo> ToolCalls)> SendMessageAsync(
