@@ -1,5 +1,7 @@
 using System.ClientModel;
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using HindsightChatDemo.Configuration;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -118,6 +120,12 @@ public sealed class HindsightAgentService : IAsyncDisposable
                     var arguments = context.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value);
                     _recorder.Record(context.Function.Name, arguments);
                     _logger.LogInformation("Recorded tool call {ToolName}", context.Function.Name);
+
+                    if (context.Function.Name == "reflect")
+                    {
+                        CaptureReflectRawText(result);
+                    }
+
                     return result;
                 };
             }
@@ -194,8 +202,76 @@ public sealed class HindsightAgentService : IAsyncDisposable
         _recorder.BeginCapture();
         var response = await _agent.RunAsync(message, session, _runOptions, cancellationToken);
         var toolCalls = _recorder.EndCapture();
+        var reflectRawText = _recorder.TakeLastReflectRawText();
 
-        return (response.Text, toolCalls);
+        var replyText = ApplyReflectMetaAnswerFallback(response.Text, reflectRawText);
+
+        return (replyText, toolCalls);
+    }
+
+    // Found by testing (2026-08-13/14): after a system-prompt fix stopped recall/reflect
+    // replies from leaking English, a second, separate model quirk stayed on reflect
+    // specifically -- the final reply describes that an answer exists ("Bu cevap ...
+    // sunar.") instead of stating it, discarding a real, grounded answer that reflect's
+    // own MCP result already contains (captured via CaptureReflectRawText below). A second
+    // round of prompt hardening aimed squarely at this (see system_message.txt) reduced but
+    // did not eliminate it -- same "prompt alone isn't enough" pattern as GreetingDetector,
+    // so it's fixed here in code instead: detect the self-describing opener and, when
+    // reflect actually ran this turn, substitute its real answer.
+    private static readonly Regex MetaAnswerOpener = new(
+        @"^\s*Bu\s+(cevap|değerlendirme|bilgi|yanıt|sonuç|özet)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private string ApplyReflectMetaAnswerFallback(string replyText, string? reflectRawText)
+    {
+        if (string.IsNullOrWhiteSpace(reflectRawText) || !MetaAnswerOpener.IsMatch(replyText))
+        {
+            return replyText;
+        }
+
+        _logger.LogWarning(
+            "Reply described its own answer instead of giving it ({Reply}) -- substituting reflect's raw result.",
+            replyText);
+
+        // The UI renders this as plain text (see wwwroot/app.js), not Markdown, so strip the
+        // heading/emphasis syntax reflect's answer tends to include rather than show it raw.
+        var plain = Regex.Replace(reflectRawText, @"^#{1,6}\s*", "", RegexOptions.Multiline);
+        plain = Regex.Replace(plain, @"\*\*(.+?)\*\*", "$1");
+        plain = Regex.Replace(plain, @"(?<!\w)_(.+?)_(?!\w)", "$1");
+        return plain.Trim();
+    }
+
+    private void CaptureReflectRawText(object? toolResult)
+    {
+        // reflect's MCP result shape: { "structuredContent": { "text": "<answer>", ... }, ... }
+        // (confirmed by logging the raw JsonElement during development -- not documented on
+        // Hindsight's API reference page, same as the /memories/list endpoint noted in
+        // CLAUDE.md).
+        try
+        {
+            if (toolResult is JsonElement root
+                && root.TryGetProperty("structuredContent", out var structured)
+                && structured.TryGetProperty("text", out var textProp)
+                && textProp.ValueKind == JsonValueKind.String)
+            {
+                var text = textProp.GetString();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    _recorder.RecordReflectRawText(text);
+                }
+            }
+            // No else: a missing structuredContent.text is expected when reflect's own MCP
+            // call errored (e.g. a malformed argument the model sent -- see CLAUDE.md's
+            // NvidiaNim battery notes) or found nothing. The meta-answer fallback below
+            // simply no-ops without a captured text in that case; the agent's own reply
+            // (an honest "couldn't find anything" or similar) is used as-is.
+        }
+        catch (Exception ex)
+        {
+            // Best-effort safety net only -- if Hindsight ever changes this result shape,
+            // fall back to whatever the agent said rather than breaking the chat turn.
+            _logger.LogWarning(ex, "Could not extract reflect's raw answer text from the tool result.");
+        }
     }
 
     // Found by testing: the model sometimes picks a tiny max_tokens for recall/reflect
