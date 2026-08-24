@@ -136,19 +136,20 @@ different way.
 
 ## Known limitations
 
-Tool-call reliability with small local models is sensitive to the model, the temperature,
-and message framing. Three models were tested with the same battery of prompts (single-fact
-`retain`, fresh-session `recall`, fresh-session `reflect`, each repeated 3-4 times):
+Tool-call reliability with small models is sensitive to the model, the temperature, and
+message framing. Three local models were tested with the same battery of prompts
+(single-fact `retain`, fresh-session `recall`, fresh-session `reflect`, each repeated 3-4
+times):
 
 | Model | `retain` | `recall` | `reflect` fires | `reflect` stays in Turkish |
 |---|---|---|---|---|
 | `llama3.2:latest` (3B) | reliable | unreliable | unreliable | n/a |
 | `qwen2.5:latest` (7B) | reliable | unreliable (~1/8) | reliable | unreliable (leaked Chinese) |
-| `llama3.1:8b` (current default) | reliable | reliable (3/3) | reliable (3/3) | reliable (3/3) |
+| `llama3.1:8b` (default when `Llm:Provider=Ollama`) | reliable | reliable (3/3) | reliable (3/3) | reliable (3/3) |
 
-`llama3.1:8b` was the clear winner and is the current default. It is noticeably slower per
-reply than `qwen2.5` (occasionally near a minute), which is an acceptable trade-off for a
-live demo. `Ollama:Temperature` at `0.3` measurably helped all three models.
+`llama3.1:8b` was the clear winner among local models. It is noticeably slower per reply
+than `qwen2.5` (occasionally near a minute), which is an acceptable trade-off for a live
+demo. `Ollama:Temperature` at `0.3` measurably helped all three models.
 
 Even with `llama3.1:8b`, complex or multi-fact messages (e.g. a complaint and an address
 change in one sentence) are less reliable than a single, clearly-stated fact — keep demo
@@ -157,6 +158,20 @@ rather than grounded in the specific stored fact, even when the tool call itself
 
 For a live demo, treat the memory-activity tag as the artifact of record; the model's prose
 around it may occasionally be imperfect.
+
+**The app's actual default is now the cloud path, not the table above.** `Llm:Provider`
+defaults to `NvidiaNim` with `meta/llama-3.1-8b-instruct` — much faster per reply than any
+local model, at a measured reliability cost: in the same battery, `recall` came back as a
+real tool call in 2/3 tries (the third emitted the call as plain text); `reflect` fired 3/3
+and stayed in Turkish 3/3 but once sent a malformed argument that Hindsight's server
+rejected. (An earlier version of this note also flagged `recall` leaking English narration
+into the customer-facing answer in 3/3 tries — fixed via a `system_message.txt` rule, see
+CLAUDE.md.) Chosen anyway for demo speed — see "The chat backend is now a config switch" in
+[CLAUDE.md](CLAUDE.md) for the full results and how to switch back to `Ollama` if
+reliability matters more than speed for a given demo. Hindsight's own extraction LLM
+(separate from this) stays on local Ollama regardless of `Llm:Provider` — see
+`docker-compose.hindsight.yml` — because both free-tier NVIDIA NIM models tested for that
+specific job failed outright.
 
 ## Demo script
 

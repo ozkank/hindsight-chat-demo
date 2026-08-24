@@ -9,8 +9,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Configuration: typed + validated at startup instead of scattered IConfiguration["..."] reads. ---
 builder.Services
+    .AddOptions<LlmOptions>()
+    .Bind(builder.Configuration.GetSection(LlmOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
     .AddOptions<OllamaOptions>()
     .Bind(builder.Configuration.GetSection(OllamaOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<NvidiaNimOptions>()
+    .Bind(builder.Configuration.GetSection(NvidiaNimOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
