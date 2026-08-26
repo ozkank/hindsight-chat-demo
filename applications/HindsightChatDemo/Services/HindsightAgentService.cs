@@ -96,10 +96,28 @@ public sealed class HindsightAgentService : IAsyncDisposable
             // that omits Tools silently wipes the agent's configured tools for that call
             // (see https://github.com/microsoft/agent-framework/issues/1453), so Tools is
             // re-specified here even though it's identical to what the agent already has.
+            //
+            // MaxOutputTokens caps the final customer-facing reply. Found by testing
+            // (2026-08-26): with no cap, a small local model can occasionally ramble for
+            // hundreds of tokens instead of the short reply system_message.txt asks for
+            // (seen once describing Hindsight's raw JSON result field-by-field, in English,
+            // instead of answering) -- each extra generated token adds real wall-clock time
+            // on local Ollama, so this both bounds worst-case latency and discourages that
+            // failure mode.
+            //
+            // 1024, not 200: a *reasoning* NvidiaNim model (e.g. nemotron-3-super-120b-a12b)
+            // spends part of this budget on an invisible "thinking" pass (returned separately
+            // as reasoning_content, not shown to the customer) before it can even decide on a
+            // tool call or write the real reply -- 200 was cut off mid-thought, producing an
+            // empty response and no tool call at all (confirmed 2026-08-26: recall silently
+            // returned "" with zero tool calls). 1024 was enough headroom in testing for both
+            // the plain Ollama model and this reasoning model; raise further only if a real
+            // reply is ever seen truncated mid-sentence.
             _runOptions = new ChatClientAgentRunOptions(new ChatOptions
             {
                 Tools = tools,
                 Temperature = temperature,
+                MaxOutputTokens = 1024,
             });
 
             // ChatClientAgent wraps our IChatClient in its own pipeline (approval handling,
