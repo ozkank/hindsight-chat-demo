@@ -32,6 +32,13 @@ public sealed class HindsightAgentService : IAsyncDisposable
     private McpClient? _mcpClient;
     private ChatClientAgentRunOptions? _runOptions;
     private Exception? _initError;
+    private AIFunction? _reflectFunction;
+
+    // Set at the top of SendMessageAsync, read inside the FunctionInvoker closure below --
+    // see BroadQuestionDetector's doc comment for why. Flows correctly into the tool-call's
+    // (child) execution context because this is a top-down AsyncLocal read, not the
+    // write-from-a-detached-Task case ToolCallRecorder had to work around.
+    private readonly AsyncLocal<string?> _currentUserMessage = new();
 
     public HindsightAgentService(
         IOptions<LlmOptions> llmOptions,
@@ -72,6 +79,10 @@ public sealed class HindsightAgentService : IAsyncDisposable
                 .Where(t => t.Name is "retain" or "recall" or "reflect")
                 .Cast<AITool>()
                 .ToList();
+
+            // Captured so the FunctionInvoker below can redirect a recall call straight to
+            // reflect for broad questions -- see BroadQuestionDetector.
+            _reflectFunction = tools.OfType<AIFunction>().FirstOrDefault(t => t.Name == "reflect");
 
             _logger.LogInformation(
                 "Available Hindsight MCP tools matching retain/recall/reflect: {Tools}",
@@ -128,18 +139,39 @@ public sealed class HindsightAgentService : IAsyncDisposable
             {
                 functionInvokingClient.FunctionInvoker = async (context, cancellationToken) =>
                 {
-                    if (context.Function.Name is "recall" or "reflect")
+                    var function = context.Function;
+                    var toolName = function.Name;
+
+                    // Found by testing (2026-08-26): "Merhaba, benim hakkımda ne
+                    // biliyorsunuz?" reliably got routed to recall instead of reflect.
+                    // recall only ever returns ONE fact, so results were wildly
+                    // inconsistent for a broad question (rich answer one run, just the
+                    // customer's name the next). See BroadQuestionDetector's doc comment.
+                    // Redirecting here -- not in the prompt -- follows the same "prompt
+                    // alone isn't enough" pattern as GreetingDetector.
+                    if (toolName == "recall" && _reflectFunction is not null
+                        && BroadQuestionDetector.LooksBroad(_currentUserMessage.Value))
                     {
-                        EnforceMinimumMaxTokens(context.Arguments, context.Function.Name);
+                        _logger.LogWarning(
+                            "recall called for a broad-looking question ('{Message}') -- redirecting to reflect instead.",
+                            _currentUserMessage.Value);
+                        function = _reflectFunction;
+                        toolName = "reflect";
                     }
 
-                    _logger.LogInformation("Invoking tool {ToolName}", context.Function.Name);
-                    var result = await context.Function.InvokeAsync(context.Arguments, cancellationToken);
-                    var arguments = context.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value);
-                    _recorder.Record(context.Function.Name, arguments);
-                    _logger.LogInformation("Recorded tool call {ToolName}", context.Function.Name);
+                    if (toolName is "recall" or "reflect")
+                    {
+                        EnforceMinimumMaxTokens(context.Arguments, toolName);
+                        EnforceNonEmptyQuery(context.Arguments, toolName);
+                    }
 
-                    if (context.Function.Name == "reflect")
+                    _logger.LogInformation("Invoking tool {ToolName}", toolName);
+                    var result = await function.InvokeAsync(context.Arguments, cancellationToken);
+                    var arguments = context.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value);
+                    _recorder.Record(toolName, arguments);
+                    _logger.LogInformation("Recorded tool call {ToolName}", toolName);
+
+                    if (toolName == "reflect")
                     {
                         CaptureReflectRawText(result);
                     }
@@ -217,6 +249,7 @@ public sealed class HindsightAgentService : IAsyncDisposable
 
         var session = await GetOrCreateSessionAsync(sessionId, cancellationToken);
 
+        _currentUserMessage.Value = message;
         _recorder.BeginCapture();
         var response = await _agent.RunAsync(message, session, _runOptions, cancellationToken);
         var toolCalls = _recorder.EndCapture();
@@ -317,6 +350,27 @@ public sealed class HindsightAgentService : IAsyncDisposable
             "{Tool} requested max_tokens={Requested}, too small to return any real content -- raising it to {Min}.",
             toolName, requested, MinRecallMaxTokens);
         arguments["max_tokens"] = MinRecallMaxTokens;
+    }
+
+    // Found by testing (2026-08-26) alongside the recall->reflect redirect above: the model
+    // sometimes hands reflect an empty query (e.g. "" for "hakkımda ne biliyorsun?"), which
+    // then finds nothing to synthesize. Falls back to the customer's raw message -- always a
+    // real, non-empty search string -- rather than searching for nothing.
+    private void EnforceNonEmptyQuery(AIFunctionArguments arguments, string toolName)
+    {
+        if (arguments.TryGetValue("query", out var raw) && !string.IsNullOrWhiteSpace(raw?.ToString()))
+        {
+            return;
+        }
+
+        var fallback = _currentUserMessage.Value;
+        if (string.IsNullOrWhiteSpace(fallback))
+        {
+            return;
+        }
+
+        _logger.LogWarning("{Tool} was called with an empty query -- falling back to the customer's raw message.", toolName);
+        arguments["query"] = fallback;
     }
 
     private async Task<AgentSession> GetOrCreateSessionAsync(string sessionId, CancellationToken cancellationToken)
