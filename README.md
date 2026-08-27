@@ -12,16 +12,23 @@ three core operations during a conversation — with every tool call surfaced li
 
 ## Architecture
 
-Everything runs locally — no cloud LLM, no external API keys.
+The only piece that can leave the machine is the agent's own chat LLM — everything else,
+including Hindsight's fact extraction, always runs locally.
 
-![Architecture diagram: browser talks HTTP to the HindsightChatDemo Agent (ASP.NET Core + Microsoft Agent Framework), which talks MCP Protocol to Hindsight and native api/chat to Ollama for tool-calling; Hindsight also uses Ollama for its own fact extraction — all inside a single Local boundary.](docs/architecture.svg)
+![Architecture diagram: browser talks HTTP to the HindsightChatDemo Agent (ASP.NET Core + Microsoft Agent Framework); the agent talks MCP Protocol to Hindsight to write memory and REST to read it; the agent's own chat LLM is a config switch between cloud NVIDIA NIM (default) and local Ollama; Hindsight's own fact-extraction LLM is always the local Ollama, regardless of that switch.](docs/architecture.svg)
 
 - The **agent** (`applications/HindsightChatDemo/`) is the only piece with custom code. It
   holds the conversation, decides — via the LLM's tool calls — when to invoke `retain`,
   `recall`, or `reflect`, and returns both the reply and the tool-call log to the browser.
-- **Ollama** serves two different consumers with the same local model: the agent's own
-  chat/tool-calling loop, and Hindsight's internal fact-extraction pipeline (see
-  `HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml`).
+  It's built on **Microsoft Agent Framework**, which owns the chat loop and the
+  tool-calling contract with whichever LLM is configured.
+- The **agent's own chat LLM is a config switch** (`Llm:Provider` in `appsettings.json`):
+  **NVIDIA NIM** (cloud, default — free-tier, no local GPU needed) or **Ollama** (local).
+  This is the *only* connection in the diagram that can leave the machine.
+- **Hindsight talks to Ollama for a separate reason**: its own internal fact-extraction
+  pipeline (`HINDSIGHT_API_LLM_MODEL` in `docker-compose.hindsight.yml`) is hard-wired to
+  local Ollama, independent of whatever the agent's `Llm:Provider` switch is set to — see
+  the note in `CLAUDE.md` on why NVIDIA NIM was tried and reverted for that specific role.
 - **Hindsight is reached two different ways, deliberately**, to demo both integration
   styles side by side:
   - **MCP** (Model Context Protocol) — the agent discovers `retain`/`recall`/`reflect` as

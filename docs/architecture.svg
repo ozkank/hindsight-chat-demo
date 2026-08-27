@@ -1,4 +1,4 @@
-<svg viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe Print','Bradley Hand','Comic Sans MS',cursive">
+<svg viewBox="0 0 1120 700" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe Print','Bradley Hand','Comic Sans MS',cursive">
   <defs>
     <filter id="sketch" x="-5%" y="-5%" width="110%" height="110%">
       <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="7" result="noise"/>
@@ -7,37 +7,63 @@
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#1e293b"/>
     </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3f6212"/>
+    </marker>
   </defs>
 
-  <rect width="1000" height="640" fill="white"/>
+  <rect width="1120" height="700" fill="white"/>
 
-  <!-- Local boundary -->
-  <rect x="30" y="30" width="940" height="580" rx="26" fill="#FEF3C7" stroke="#1e3a5f" stroke-width="2.5" stroke-dasharray="9 7" filter="url(#sketch)"/>
+  <!-- ============ NVIDIA NIM box (CLOUD — outside the Local boundary, on purpose) ============ -->
+  <rect x="35" y="110" width="205" height="150" rx="18" fill="#f7fee7" stroke="#3f6212" stroke-width="2.5" filter="url(#sketch)"/>
+  <!-- little cloud outline above the box to flag "not local" -->
+  <path d="M85 108 C78 108, 73 103, 74 97 C71 91, 76 84, 83 85 C85 79, 94 78, 98 84 C106 82, 112 88, 109 95 C114 98, 112 106, 105 106 Z"
+        fill="white" stroke="#3f6212" stroke-width="2" filter="url(#sketch)"/>
+  <!-- chip icon (hand-drawn, no emoji) -->
+  <g transform="translate(137,155)" stroke="#3f6212" stroke-width="2.2" fill="#ecfccb" stroke-linejoin="round">
+    <rect x="-16" y="-16" width="32" height="32" rx="4"/>
+    <line x1="-16" y1="-8" x2="-24" y2="-8" fill="none"/>
+    <line x1="-16" y1="2" x2="-24" y2="2" fill="none"/>
+    <line x1="16" y1="-8" x2="24" y2="-8" fill="none"/>
+    <line x1="16" y1="2" x2="24" y2="2" fill="none"/>
+    <line x1="-8" y1="-16" x2="-8" y2="-24" fill="none"/>
+    <line x1="4" y1="-16" x2="4" y2="-24" fill="none"/>
+    <line x1="-8" y1="16" x2="-8" y2="24" fill="none"/>
+    <line x1="4" y1="16" x2="4" y2="24" fill="none"/>
+    <circle cx="0" cy="0" r="6" fill="none"/>
+  </g>
+  <text x="137" y="200" font-size="19" text-anchor="middle" font-weight="bold" fill="#365314">NVIDIA NIM</text>
+  <text x="137" y="220" font-size="12" text-anchor="middle" fill="#4d7c0f">nemotron-3-super-120b</text>
+  <text x="137" y="245" font-size="12" text-anchor="middle" fill="#84cc16" font-style="italic">cloud · free tier</text>
+
+  <!-- ============ Local boundary ============ -->
+  <rect x="270" y="30" width="815" height="645" rx="26" fill="#FEF3C7" stroke="#1e3a5f" stroke-width="2.5" stroke-dasharray="9 7" filter="url(#sketch)"/>
 
   <!-- "Local" tag: simple laptop icon, no font/emoji dependency -->
-  <g transform="translate(50,565)">
+  <g transform="translate(292,650)">
     <rect x="0" y="0" width="26" height="17" rx="2" fill="none" stroke="#1e3a5f" stroke-width="2"/>
     <rect x="-4" y="17" width="34" height="4" rx="2" fill="#1e3a5f"/>
   </g>
-  <text x="92" y="580" font-size="20" fill="#1e3a5f" font-style="italic">Local</text>
+  <text x="334" y="665" font-size="20" fill="#1e3a5f" font-style="italic">Local</text>
 
   <!-- ============ Ollama box ============ -->
-  <rect x="65" y="270" width="170" height="110" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
+  <rect x="305" y="300" width="170" height="130" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
   <!-- llama icon (hand-drawn silhouette, no emoji) -->
-  <g transform="translate(122,282)" stroke="#8a6d3b" stroke-width="2.5" fill="#f5ead6" stroke-linejoin="round" stroke-linecap="round">
+  <g transform="translate(362,308)" stroke="#8a6d3b" stroke-width="2.5" fill="#f5ead6" stroke-linejoin="round" stroke-linecap="round">
     <path d="M20 40 C10 40, 6 32, 8 24 C9 16, 6 10, 10 4 C12 1, 17 0, 19 4 C21 8, 19 12, 22 15 L30 13 C34 12, 37 15, 35 18 C33 21, 28 20, 25 22 C27 30, 26 37, 22 40 Z"/>
     <path d="M13 6 L10 -2 M18 4 L17 -3" fill="none"/>
     <circle cx="16" cy="8" r="1.4" fill="#1e293b" stroke="none"/>
     <line x1="14" y1="39" x2="12" y2="46" stroke-width="2"/>
     <line x1="22" y1="39" x2="24" y2="46" stroke-width="2"/>
   </g>
-  <text x="150" y="345" font-size="19" text-anchor="middle" font-weight="bold" fill="#1e293b">Ollama</text>
-  <text x="150" y="365" font-size="13" text-anchor="middle" fill="#475569">llama3.1:8b</text>
+  <text x="390" y="378" font-size="19" text-anchor="middle" font-weight="bold" fill="#1e293b">Ollama</text>
+  <text x="390" y="398" font-size="13" text-anchor="middle" fill="#475569">llama3.1:8b</text>
+  <text x="390" y="416" font-size="11" text-anchor="middle" fill="#94a3b8">local · always on</text>
 
   <!-- ============ Hindsight box ============ -->
-  <rect x="320" y="255" width="240" height="140" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
+  <rect x="565" y="280" width="245" height="150" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
   <!-- eye + memory-network icon (hand-drawn, no emoji) -->
-  <g transform="translate(440,300)">
+  <g transform="translate(687,325)">
     <path d="M-24 0 C-14 -16, 14 -16, 24 0 C14 16, -14 16, -24 0 Z" fill="none" stroke="#0e7490" stroke-width="2.5" stroke-linejoin="round"/>
     <circle cx="0" cy="0" r="8" fill="#0e7490"/>
     <circle cx="3" cy="-3" r="2" fill="white"/>
@@ -48,18 +74,18 @@
     <line x1="-24" y1="0" x2="-34" y2="4" stroke="#0e7490" stroke-width="1.5"/>
     <line x1="24" y1="0" x2="30" y2="-14" stroke="#0e7490" stroke-width="1.5"/>
   </g>
-  <text x="440" y="335" font-size="19" text-anchor="middle" font-weight="bold" fill="#1e293b">Hindsight</text>
-  <text x="440" y="358" font-size="13" text-anchor="middle" fill="#475569">retain · recall · reflect</text>
-  <text x="440" y="378" font-size="11" text-anchor="middle" fill="#94a3b8">MCP + Admin UI</text>
+  <text x="687" y="360" font-size="19" text-anchor="middle" font-weight="bold" fill="#1e293b">Hindsight</text>
+  <text x="687" y="383" font-size="13" text-anchor="middle" fill="#475569">retain · recall · reflect</text>
+  <text x="687" y="403" font-size="11" text-anchor="middle" fill="#94a3b8">MCP + REST + Admin UI</text>
 
   <!-- ============ Agent box ============ -->
-  <rect x="630" y="80" width="330" height="280" rx="22" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
-  <text x="795" y="118" font-size="19" text-anchor="middle" font-weight="bold" fill="#1e293b">HindsightChatDemo Agent</text>
+  <rect x="830" y="90" width="260" height="300" rx="22" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
+  <text x="960" y="125" font-size="18" text-anchor="middle" font-weight="bold" fill="#1e293b">HindsightChatDemo Agent</text>
 
   <!-- inner sub-box -->
-  <rect x="665" y="140" width="260" height="115" rx="16" fill="#eef2ff" stroke="#1e293b" stroke-width="2" filter="url(#sketch)"/>
+  <rect x="860" y="148" width="200" height="120" rx="16" fill="#eef2ff" stroke="#1e293b" stroke-width="2" filter="url(#sketch)"/>
   <!-- robot icon (hand-drawn, no emoji) -->
-  <g transform="translate(795,185)" stroke="#334155" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+  <g transform="translate(960,195)" stroke="#334155" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
     <line x1="0" y1="-24" x2="0" y2="-18" fill="none"/>
     <circle cx="0" cy="-27" r="3" fill="#4338ca" stroke="none"/>
     <rect x="-20" y="-18" width="40" height="28" rx="8" fill="#c7d2fe"/>
@@ -67,52 +93,60 @@
     <rect x="5" y="-8" width="8" height="8" rx="2" fill="#1e293b" stroke="none"/>
     <line x1="-8" y1="8" x2="8" y2="8" fill="none"/>
     <rect x="-27" y="-10" width="6" height="12" rx="3" fill="#c7d2fe"/>
-    <rect x="21" y="-10" width="6" height="12" rx="3" fill="#c7d2fe"/>
+    <rect x="27" y="-10" width="6" height="12" rx="3" fill="#c7d2fe"/>
   </g>
-  <text x="795" y="230" font-size="13" text-anchor="middle" fill="#334155">/api/chat · /api/memories · /api/health</text>
-  <text x="795" y="248" font-size="11" text-anchor="middle" fill="#94a3b8">ToolCallRecorder</text>
+  <text x="960" y="245" font-size="12" text-anchor="middle" fill="#334155">/api/chat · /api/memories</text>
+  <text x="960" y="260" font-size="11" text-anchor="middle" fill="#94a3b8">ToolCallRecorder</text>
 
   <!-- framework bullet: simple diamond, no emoji -->
-  <polygon points="662,296 668,290 674,296 668,302" fill="#4338ca"/>
-  <text x="795" y="300" font-size="15" text-anchor="middle" fill="#4338ca">Microsoft Agent Framework</text>
-  <text x="795" y="320" font-size="12" text-anchor="middle" fill="#94a3b8">ASP.NET Core Minimal API</text>
-  <text x="795" y="342" font-size="11" text-anchor="middle" fill="#94a3b8">applications/HindsightChatDemo</text>
+  <polygon points="900,285 906,279 912,285 906,291" fill="#4338ca"/>
+  <text x="960" y="289" font-size="14" text-anchor="middle" fill="#4338ca">Microsoft Agent Framework</text>
+  <text x="960" y="308" font-size="11" text-anchor="middle" fill="#94a3b8">ASP.NET Core Minimal API</text>
+  <text x="960" y="326" font-size="11" text-anchor="middle" fill="#94a3b8">chat LLM: config switch ↓</text>
 
   <!-- ============ Browser box ============ -->
-  <rect x="700" y="450" width="190" height="120" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
-  <rect x="720" y="470" width="150" height="26" rx="8" fill="#e2e8f0" stroke="#1e293b" stroke-width="1.5"/>
-  <circle cx="732" cy="483" r="3.5" fill="#ef4444"/>
-  <circle cx="744" cy="483" r="3.5" fill="#eab308"/>
-  <circle cx="756" cy="483" r="3.5" fill="#22c55e"/>
+  <rect x="865" y="500" width="190" height="120" rx="18" fill="white" stroke="#1e293b" stroke-width="2.5" filter="url(#sketch)"/>
+  <rect x="885" y="520" width="150" height="26" rx="8" fill="#e2e8f0" stroke="#1e293b" stroke-width="1.5"/>
+  <circle cx="897" cy="533" r="3.5" fill="#ef4444"/>
+  <circle cx="909" cy="533" r="3.5" fill="#eab308"/>
+  <circle cx="921" cy="533" r="3.5" fill="#22c55e"/>
   <!-- globe icon (hand-drawn, no emoji) -->
-  <g transform="translate(795,530)" fill="none" stroke="#0369a1" stroke-width="2">
+  <g transform="translate(960,580)" fill="none" stroke="#0369a1" stroke-width="2">
     <circle cx="0" cy="0" r="18"/>
     <ellipse cx="0" cy="0" rx="7" ry="18"/>
     <line x1="-18" y1="0" x2="18" y2="0"/>
     <path d="M-15 -9 C-6 -5, 6 -5, 15 -9"/>
     <path d="M-15 9 C-6 5, 6 5, 15 9"/>
   </g>
-  <text x="795" y="558" font-size="13" text-anchor="middle" fill="#475569">Chat UI (wwwroot)</text>
+  <text x="960" y="608" font-size="13" text-anchor="middle" fill="#475569">Chat UI (wwwroot)</text>
 
   <!-- ============ Arrows ============ -->
-  <!-- Ollama <-> Hindsight -->
-  <line x1="238" y1="325" x2="317" y2="325" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
+
+  <!-- NVIDIA NIM <-> Agent : chat LLM, DEFAULT provider -->
+  <path d="M 240 175 C 500 40, 720 60, 858 178" fill="none" stroke="#3f6212" stroke-width="2.8" marker-start="url(#arrowGreen)" marker-end="url(#arrowGreen)" filter="url(#sketch)"/>
+  <text x="530" y="65" font-size="14" text-anchor="middle" fill="#3f6212" font-weight="bold">chat LLM · DEFAULT</text>
+  <text x="530" y="83" font-size="11" text-anchor="middle" fill="#4d7c0f">Llm:Provider=NvidiaNim</text>
+
+  <!-- Ollama <-> Agent : chat LLM, alternate/local provider (dashed = not default) -->
+  <path d="M 430 300 C 520 200, 700 165, 858 210" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="7 6" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="620" y="185" font-size="13" text-anchor="middle" fill="#64748b" font-weight="bold">chat LLM · alternate</text>
+  <text x="620" y="202" font-size="11" text-anchor="middle" fill="#94a3b8">Llm:Provider=Ollama</text>
+
+  <!-- Ollama <-> Hindsight : fact extraction, always on regardless of agent's chat LLM -->
+  <line x1="478" y1="365" x2="562" y2="360" stroke="#1e293b" stroke-width="2.4" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="520" y="345" font-size="12" text-anchor="middle" fill="#1e3a5f" font-weight="bold">fact extraction</text>
 
   <!-- Hindsight <-> Agent : MCP Protocol (agent WRITES: retain/recall/reflect tool calls) -->
-  <line x1="558" y1="290" x2="662" y2="200" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
-  <text x="558" y="235" font-size="15" fill="#1e3a5f" font-weight="bold" transform="rotate(-35 558 235)">MCP Protocol</text>
+  <line x1="805" y1="310" x2="858" y2="255" stroke="#1e293b" stroke-width="2.4" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="810" y="270" font-size="14" fill="#1e3a5f" font-weight="bold" transform="rotate(-40 810 270)">MCP · write</text>
 
   <!-- Hindsight <-> Agent : plain REST (agent READS: IHindsightRestClient, no MCP/LLM) -->
-  <line x1="558" y1="345" x2="630" y2="332" stroke="#0e7490" stroke-width="2.2" stroke-dasharray="6 5" marker-end="url(#arrow)" filter="url(#sketch)"/>
-  <text x="595" y="405" font-size="14" fill="#0e7490" font-weight="bold">REST · /memories</text>
-
-  <!-- Agent <-> Ollama : curved, native api/chat -->
-  <path d="M 665 250 C 500 460, 260 460, 155 383" fill="none" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
-  <text x="410" y="450" font-size="14" text-anchor="middle" fill="#1e3a5f" font-weight="bold">native api/chat (tool-calling)</text>
+  <line x1="805" y1="370" x2="858" y2="345" stroke="#0e7490" stroke-width="2.2" stroke-dasharray="6 5" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="825" y="410" font-size="13" text-anchor="middle" fill="#0e7490" font-weight="bold">REST · read</text>
 
   <!-- Agent <-> Browser -->
-  <line x1="795" y1="362" x2="795" y2="447" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
-  <text x="900" y="410" font-size="14" text-anchor="middle" fill="#1e3a5f" font-weight="bold">HTTP</text>
+  <line x1="960" y1="392" x2="960" y2="497" stroke="#1e293b" stroke-width="2.2" marker-start="url(#arrow)" marker-end="url(#arrow)" filter="url(#sketch)"/>
+  <text x="1030" y="450" font-size="14" text-anchor="middle" fill="#1e3a5f" font-weight="bold">HTTP</text>
 
-  <text x="500" y="20" font-size="13" text-anchor="middle" fill="#94a3b8" font-style="italic">Everything runs locally — no cloud LLM, no external API keys.</text>
+  <text x="678" y="20" font-size="13" text-anchor="middle" fill="#94a3b8" font-style="italic">The only cloud call is the agent's own chat LLM (NVIDIA NIM, default) — Hindsight's fact extraction always stays on local Ollama.</text>
 </svg>
