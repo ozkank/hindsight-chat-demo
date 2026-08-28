@@ -15,7 +15,9 @@ three core operations during a conversation — with every tool call surfaced li
 The only piece that can leave the machine is the agent's own chat LLM — everything else,
 including Hindsight's fact extraction, always runs locally.
 
-![Architecture diagram: browser talks HTTP to the HindsightChatDemo Agent (ASP.NET Core + Microsoft Agent Framework); the agent talks MCP Protocol to Hindsight to write memory and REST to read it; the agent's own chat LLM is a config switch between cloud NVIDIA NIM (default) and local Ollama; Hindsight's own fact-extraction LLM is always the local Ollama, regardless of that switch.](docs/architecture.svg)
+![Architecture diagram: the browser calls ChatEndpoints (POST /api/chat) and MemoryEndpoints (GET /api/memories). ChatEndpoints checks bare greetings via GreetingDetector, then forwards the message to HindsightAgentService, which talks to the agent's chat LLM (Ollama or NVIDIA NIM, config switch) and calls Hindsight over MCP to retain/recall/reflect. MemoryEndpoints reads memory directly through HindsightRestClient over plain REST. Hindsight's own fact-extraction LLM is a separate, always-local Ollama model.](docs/architecture.png)
+
+*[Open the interactive version](docs/architecture.html) — click a box to see its source file, switch between the write-path and read-path views, or toggle light/dark.*
 
 - The **agent** (`applications/HindsightChatDemo/`) is the only piece with custom code. It
   holds the conversation, decides — via the LLM's tool calls — when to invoke `retain`,
